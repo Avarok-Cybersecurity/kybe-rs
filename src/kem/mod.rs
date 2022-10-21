@@ -35,7 +35,7 @@ impl<const N: usize, const K: usize> KEM<N, K> {
         let (h1, h2) = h(pk);
         let (k_bar, r) = g(&ByteArray::concat(&[&m1, &m2, &h1, &h2]));
 
-        let c = self.pke.encrypt(pk, &m1.append(&m2), r);
+        let c = self.pke.encrypt(pk, &m1.append(&m2), &r);
 
         let (h1, h2) = h(&c);
         let k = kdf(&ByteArray::concat(&[&k_bar, &h1, &h2]), self.sk_size);
@@ -53,7 +53,7 @@ impl<const N: usize, const K: usize> KEM<N, K> {
 
         let m = self.pke.decrypt(&sk_prime, c);
         let (k_bar, r) = g(&m.append(&hash));
-        let c_prime = self.pke.encrypt(&pk, &m, r);
+        let c_prime = self.pke.encrypt(&pk, &m, &r);
 
         let (h1, h2) = h(c);
         if *c == c_prime {
