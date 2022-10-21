@@ -59,7 +59,7 @@ impl<const N: usize, const K: usize> PKE<N, K> {
 
     /// Kyber CPAPKE Encryption : public key, message, random coins => ciphertext
     /// Algorithm 5 p. 10
-    pub fn encrypt(&self, pk: &ByteArray, m: &ByteArray, r: ByteArray) -> ByteArray {
+    pub fn encrypt(&self, pk: &ByteArray, m: &ByteArray, r: &ByteArray) -> ByteArray {
         let offset = 12 * K * N / 8;
         let prf_len = 64 * self.eta;
 
@@ -75,10 +75,10 @@ impl<const N: usize, const K: usize> PKE<N, K> {
 
         let (mut r_bold, mut e1) = (PolyVec3329::<N, K>::init(), PolyVec3329::<N, K>::init());
         for i in 0..K {
-            r_bold.set(i, cbd(prf(&r, i, prf_len), self.eta));
-            e1.set(i, cbd(prf(&r, K + i, prf_len), self.eta));
+            r_bold.set(i, cbd(prf(r, i, prf_len), self.eta));
+            e1.set(i, cbd(prf(r, K + i, prf_len), self.eta));
         }
-        let e2 = cbd(prf(&r, 2 * K, prf_len), self.eta);
+        let e2 = cbd(prf(r, 2 * K, prf_len), self.eta);
 
         let r_hat = ntt_vec(&r_bold);
         let u_bold = ntt_product_matvec(&a_t, &r_hat).add(&e1);
