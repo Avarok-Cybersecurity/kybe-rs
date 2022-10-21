@@ -9,7 +9,7 @@ use crate::structures::{
 
 /// Deserialize ByteArray into Polynomial
 /// Algorithm 3 p. 8
-pub fn decode_to_poly<const N: usize>(bs: ByteArray, ell: usize) -> Poly3329<N> {
+pub fn decode_to_poly<const N: usize>(bs: &ByteArray, ell: usize) -> Poly3329<N> {
     let mut f = [F3329::zero(); N];
 
     for (i, el) in f.iter_mut().enumerate() {
@@ -57,7 +57,7 @@ pub fn decode_to_polyvec<const N: usize, const D: usize>(
 
     for i in 0..D {
         let (a, c) = b.split_at(32 * ell);
-        p_vec.set(i, decode_to_poly(a, ell));
+        p_vec.set(i, decode_to_poly(&a, ell));
         b = c.clone();
     }
 
@@ -83,6 +83,6 @@ pub fn encode_polyvec<const N: usize, const D: usize>(
 fn encode_decode_poly() {
     let original = Poly3329::from_vec([Default::default(); 256]);
     let encoded = encode_poly(original.clone(), 12);
-    let decoded = decode_to_poly(encoded, 12);
+    let decoded = decode_to_poly(&encoded, 12);
     assert!(decoded == original);
 }

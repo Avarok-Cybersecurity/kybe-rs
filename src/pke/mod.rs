@@ -89,7 +89,7 @@ impl<const N: usize, const K: usize> PKE<N, K> {
         let v = ntt_product_vec(&t_hat, &r_hat)
             .add(&e2)
             .add(&decompress_poly(
-                decode_to_poly::<N>(m.clone(), 1),
+                decode_to_poly::<N>(m, 1),
                 1,
                 self.q,
             ));
@@ -109,7 +109,7 @@ impl<const N: usize, const K: usize> PKE<N, K> {
         let (c1, c2) = ct.split_at(offset);
 
         let u = decompress_polyvec(decode_to_polyvec::<N, K>(c1, du), du, self.q);
-        let v = decompress_poly(decode_to_poly(c2, dv), dv, self.q);
+        let v = decompress_poly(decode_to_poly(&c2, dv), dv, self.q);
         let s = decode_to_polyvec(sk.clone(), 12);
 
         let m = v.sub(&ntt_product_vec(&s, &ntt_vec(&u)));
