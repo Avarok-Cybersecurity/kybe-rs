@@ -28,6 +28,7 @@ pub fn decode_to_poly<const N: usize, T: AsRef<[u8]>>(bs: T, ell: usize) -> Poly
 
 /// Serialize Poly into ByteArray
 pub fn encode_poly<const N: usize>(p: Poly3329<N>, ell: usize) -> ByteArray {
+    // TODO: in-place
     let mut b = vec![];
     let mut c: u8 = 0;
 

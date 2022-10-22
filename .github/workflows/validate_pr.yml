@@ -1,0 +1,35 @@
+name: Validate PR
+on:
+  workflow_call:
+
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: full
+  # 40 MiB stack
+  RUST_MIN_STACK: 40971520
+  RUST_LOG: "lusna=warn"
+
+jobs:
+  validate:
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: Avarok-Cybersecurity/gh-actions-deps@master
+      - run: cargo test
+      - uses: actions/github-script@v6
+        if: failure()
+        with:
+          script: |
+            const { owner, repo } = context.repo
+            console.log('Cancelling ...');
+            const run_id = "${{ github.run_id }}";
+            await github.rest.actions.cancelWorkflowRun({ owner, repo, run_id });
+            return 'stop'
+          result-encoding: string
