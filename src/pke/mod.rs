@@ -160,6 +160,41 @@ fn encrypt_then_decrypt_cpapke_512() {
 }
 
 #[test]
+fn encrypt_then_decrypt_cpapke_512_fail() {
+    let pke = crate::kyber512pke();
+    let (mut sk, pk) = pke.keygen().unwrap();
+
+    let m = ByteArray::random(32);
+    let r = ByteArray::random(32);
+
+    let enc = pke.encrypt(&pk, &m, &r).unwrap();
+
+    // alter the SK's first byte
+    sk.data[0] = sk.data[0].wrapping_add(1);
+    let dec = pke.decrypt(&sk, &enc).unwrap();
+
+    assert_ne!(m, dec);
+}
+
+#[test]
+fn encrypt_then_decrypt_cpapke_512_fail2() {
+    let pke = crate::kyber512pke();
+    let (sk, pk) = pke.keygen().unwrap();
+
+    let m = ByteArray::random(32);
+    let r = ByteArray::random(32);
+
+    let mut enc = pke.encrypt(&pk, &m, &r).unwrap();
+
+    // alter the enc's first byte
+    let len = enc.data.len();
+    enc.data[len-1] = enc.data[len-1].wrapping_add(200);
+    let dec = pke.decrypt(&sk, &enc).unwrap();
+
+    assert_ne!(m, dec);
+}
+
+#[test]
 fn encrypt_then_decrypt_cpapke_768() {
     let pke = crate::kyber768pke();
     let (sk, pk) = pke.keygen().unwrap();
@@ -201,7 +236,8 @@ fn encrypt_then_decrypt_cpapke_768_fail2() {
     let mut enc = pke.encrypt(&pk, &m, &r).unwrap();
 
     // alter the enc's first byte
-    enc.data[10] = enc.data[10].wrapping_add(99);
+    let len = enc.data.len();
+    enc.data[len-1] = enc.data[len-1].wrapping_add(200);
     let dec = pke.decrypt(&sk, &enc).unwrap();
 
     assert_ne!(m, dec);

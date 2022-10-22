@@ -12,3 +12,4 @@ Cargo.lock
 # Remove bench results
 **/perf.data
 **/perf.data.old
+.idea
