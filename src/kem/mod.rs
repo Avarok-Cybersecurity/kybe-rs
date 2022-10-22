@@ -2,10 +2,10 @@
 //!
 //! Structure that handles all the parameters and functions required to perform the KEM
 
-use crate::Error;
 use crate::functions::utils::{g, h, kdf};
 use crate::pke::PKE;
 use crate::structures::ByteArray;
+use crate::Error;
 
 use crate::structures::bytearray::SafeSplit;
 
@@ -69,7 +69,10 @@ impl<const N: usize, const K: usize> KEM<N, K> {
         let ret = if c == c_prime.as_ref() {
             kdf(&ByteArray::concat(&[&k_bar, &h1, &h2]), self.sk_size)
         } else {
-            kdf(&ByteArray::concat(&[z, h1.as_ref(), h2.as_ref()]), self.sk_size)
+            kdf(
+                &ByteArray::concat(&[z, h1.as_ref(), h2.as_ref()]),
+                self.sk_size,
+            )
         };
 
         Ok(ret)

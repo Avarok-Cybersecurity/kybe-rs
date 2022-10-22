@@ -2,8 +2,8 @@
 //!
 //! ByteArray used for exchange and encoding/decoding
 
-use rand::prelude::*;
 use crate::Error;
+use rand::prelude::*;
 
 /// A struct representing an array of bytes
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -13,7 +13,7 @@ pub struct ByteArray {
 }
 
 pub struct ByteArrayRef<'a> {
-    pub data: &'a [u8]
+    pub data: &'a [u8],
 }
 
 impl ByteArray {

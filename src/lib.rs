@@ -83,5 +83,5 @@ pub const fn kyber768kem() -> KEM<256, 3> {
 
 #[derive(Debug)]
 pub enum Error {
-    Decrypt(String)
+    Decrypt(String),
 }

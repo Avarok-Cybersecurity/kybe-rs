@@ -2,11 +2,11 @@
 //!
 //! Utils to serialize/deserialize polynomial and polyvec
 
-use crate::Error;
 use crate::structures::{
     algebraics::{FiniteField, RingModule},
     ByteArray, Poly3329, PolyVec3329, F3329,
 };
+use crate::Error;
 
 use crate::structures::bytearray::GetBit;
 use crate::structures::bytearray::SafeSplit;
@@ -62,9 +62,9 @@ pub fn decode_to_polyvec<const N: usize, const D: usize, T: AsRef<[u8]>>(
     let mut init_split_pt = 0;
     for i in 0..D {
         let (_, c) = bs.safe_split_at(init_split_pt)?;
-        let (a, _) = c.safe_split_at(32*ell)?;
+        let (a, _) = c.safe_split_at(32 * ell)?;
         p_vec.set(i, decode_to_poly(a, ell));
-        init_split_pt += (32*ell);
+        init_split_pt += (32 * ell);
     }
 
     Ok(p_vec)

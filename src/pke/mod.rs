@@ -2,7 +2,6 @@
 //!
 //! Structure that handles all the parameters and functions required to perform the PKE
 
-use crate::Error;
 use crate::functions::{
     compress::*,
     encode::*,
@@ -13,6 +12,7 @@ use crate::structures::{
     algebraics::{FiniteRing, RingModule},
     ByteArray, PolyMatrix3329, PolyVec3329,
 };
+use crate::Error;
 
 use crate::structures::bytearray::SafeSplit;
 
@@ -64,7 +64,12 @@ impl<const N: usize, const K: usize> PKE<N, K> {
 
     /// Kyber CPAPKE Encryption : public key, message, random coins => ciphertext
     /// Algorithm 5 p. 10
-    pub fn encrypt<T: AsRef<[u8]>, R: AsRef<[u8]>, V: AsRef<[u8]>>(&self, pk: T, m: R, r: V) -> Result<ByteArray, Error> {
+    pub fn encrypt<T: AsRef<[u8]>, R: AsRef<[u8]>, V: AsRef<[u8]>>(
+        &self,
+        pk: T,
+        m: R,
+        r: V,
+    ) -> Result<ByteArray, Error> {
         let pk = pk.as_ref();
         let m = m.as_ref();
         let r = r.as_ref();
@@ -94,11 +99,7 @@ impl<const N: usize, const K: usize> PKE<N, K> {
 
         let v = ntt_product_vec(&t_hat, &r_hat)
             .add(&e2)
-            .add(&decompress_poly(
-                decode_to_poly::<N, _>(m, 1),
-                1,
-                self.q,
-            ));
+            .add(&decompress_poly(decode_to_poly::<N, _>(m, 1), 1, self.q));
 
         let mut c1 = encode_polyvec(compress_polyvec(u_bold, self.du, self.q), self.du);
         let c2 = encode_poly(compress_poly(v, self.dv, self.q), self.dv);
@@ -188,7 +189,6 @@ fn encrypt_then_decrypt_cpapke_768_fail() {
 
     assert_ne!(m, dec);
 }
-
 
 #[test]
 fn encrypt_then_decrypt_cpapke_768_fail2() {

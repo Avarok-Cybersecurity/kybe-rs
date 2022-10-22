@@ -1,7 +1,11 @@
 //! Utils
 //!
 //! Various utils functions defined for the KEM anf PKE algorithms
-use crate::{Error, functions::hash, structures::{algebraics::FiniteField, ByteArray, Poly3329, F3329}};
+use crate::{
+    functions::hash,
+    structures::{algebraics::FiniteField, ByteArray, Poly3329, F3329},
+    Error,
+};
 
 use crate::structures::bytearray::GetBit;
 use crate::structures::bytearray::SafeSplit;
