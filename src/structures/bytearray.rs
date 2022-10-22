@@ -3,11 +3,17 @@
 //! ByteArray used for exchange and encoding/decoding
 
 use rand::prelude::*;
+use crate::Error;
+
 /// A struct representing an array of bytes
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ByteArray {
     /// Array of bytes
     pub data: Vec<u8>,
+}
+
+pub struct ByteArrayRef<'a> {
+    pub data: &'a [u8]
 }
 
 impl ByteArray {
@@ -33,55 +39,52 @@ impl ByteArray {
     }
 
     /// Append two ByteArrays together
-    pub fn append(&self, other: &Self) -> Self {
-        let mut data = Vec::with_capacity(self.data.len() + other.data.len());
-
-        data.extend_from_slice(&self.data);
-        data.extend_from_slice(&other.data);
-
-        Self { data }
+    pub fn append<T: AsRef<[u8]>>(&mut self, other: T) {
+        self.data.extend_from_slice(other.as_ref())
     }
 
     /// Append an array of ByteArrays together
-    pub fn concat(items: &[&Self]) -> Self {
-        let len = items.iter().map(|slice| slice.data.len()).sum();
+    pub fn concat<T: AsRef<[u8]>>(items: &[T]) -> Self {
+        let len = items.iter().map(|slice| slice.as_ref().len()).sum();
         let mut data = Vec::with_capacity(len);
 
         for item in items.iter() {
-            data.extend_from_slice(&item.data);
+            data.extend_from_slice(item.as_ref());
         }
 
         Self { data }
     }
+}
 
-    /// Get the value of the bit at position pos
-    pub fn get_bit(&self, pos: usize) -> bool {
+impl AsRef<[u8]> for ByteArray {
+    fn as_ref(&self) -> &[u8] {
+        self.data.as_slice()
+    }
+}
+
+pub(crate) trait GetBit {
+    fn get_bit(&self, pos: usize) -> bool;
+}
+
+pub(crate) trait SafeSplit {
+    fn safe_split_at(&self, pos: usize) -> Result<(&[u8], &[u8]), Error>;
+}
+
+impl<T: AsRef<[u8]>> GetBit for T {
+    fn get_bit(&self, pos: usize) -> bool {
         let (index, offset) = (pos / 8, pos % 8);
         let mask = 1 << offset;
-        !((self.data[index] & mask) == 0)
+        !((self.as_ref()[index] & mask) == 0)
     }
+}
 
-    /// Trim the ByteArray from the first num bytes
-    pub fn skip(&self, num: usize) -> Self {
-        let data = if num < self.data.len() {
-            Vec::from(&self.data[..num])
+impl<T: AsRef<[u8]>> SafeSplit for T {
+    fn safe_split_at(&self, pos: usize) -> Result<(&[u8], &[u8]), Error> {
+        let this = self.as_ref();
+        if pos > this.len() {
+            Err(Error::Decrypt(format!("pos={pos} > len={}", this.len())))
         } else {
-            Vec::new()
-        };
-
-        Self { data }
-    }
-
-    /// Split the ByteArray at the position pos
-    pub fn split_at(&self, pos: usize) -> (Self, Self) {
-        let (d1, d2) = self.data.split_at(pos);
-        (Self { data: d1.to_vec() }, Self { data: d2.to_vec() })
-    }
-
-    /// Truncate the Byte Array to size len
-    pub fn truncate(&self, len: usize) -> Self {
-        let mut data = self.data.clone();
-        data.truncate(len);
-        Self { data }
+            Ok(this.split_at(pos))
+        }
     }
 }

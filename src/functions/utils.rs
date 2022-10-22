@@ -1,10 +1,10 @@
 //! Utils
 //!
 //! Various utils functions defined for the KEM anf PKE algorithms
-use crate::{
-    functions::hash,
-    structures::{algebraics::FiniteField, ByteArray, Poly3329, F3329},
-};
+use crate::{Error, functions::hash, structures::{algebraics::FiniteField, ByteArray, Poly3329, F3329}};
+
+use crate::structures::bytearray::GetBit;
+use crate::structures::bytearray::SafeSplit;
 
 /// Receives as input a byte stream B=(b0; b1; b2;...) and computes the NTT-representation a' = a'_0 + a'_0X + ... + a'_n-1X^(n-1) in R_q of a in R_q
 /// Algorithm 1 p. 7
@@ -51,20 +51,20 @@ pub fn cbd<const N: usize>(bs: ByteArray, eta: usize) -> Poly3329<N> {
 }
 
 /// Pseudo random function => SHAKE-256(s||b);
-pub fn prf(s: &ByteArray, b: usize, len: usize) -> ByteArray {
-    let b_as_bytes = ByteArray::from_bytes(&(b as u64).to_be_bytes());
-    let input = ByteArray::concat(&[s, &b_as_bytes]);
+pub fn prf<T: AsRef<[u8]>>(s: T, b: usize, len: usize) -> ByteArray {
+    let b_as_bytes = &(b as u64).to_be_bytes() as &[u8];
+    let input = ByteArray::concat(&[s.as_ref(), b_as_bytes]);
 
     ByteArray {
         data: hash::shake_256(&input.data, len),
     }
 }
 
-/// Extendable output function => SHAKE-128(rho||j||i) with output of lenght len
-pub fn xof(r: &ByteArray, i: usize, j: usize, len: usize) -> ByteArray {
-    let i_as_bytes = ByteArray::from_bytes(&(i as u64).to_be_bytes());
-    let j_as_bytes = ByteArray::from_bytes(&(j as u64).to_be_bytes());
-    let input = ByteArray::concat(&[r, &i_as_bytes, &j_as_bytes]);
+/// Extendable output function => SHAKE-128(rho||j||i) with output of length len
+pub fn xof<T: AsRef<[u8]>>(r: T, i: usize, j: usize, len: usize) -> ByteArray {
+    let i_as_bytes = &(i as u64).to_be_bytes() as &[u8];
+    let j_as_bytes = &(j as u64).to_be_bytes() as &[u8];
+    let input = ByteArray::concat(&[r.as_ref(), i_as_bytes, j_as_bytes]);
 
     ByteArray {
         data: hash::shake_128(&input.data, len),
@@ -72,19 +72,19 @@ pub fn xof(r: &ByteArray, i: usize, j: usize, len: usize) -> ByteArray {
 }
 
 /// Hash function => SHA3-256
-pub fn h(r: &ByteArray) -> (ByteArray, ByteArray) {
-    let hash = hash::sha3_256(&r.data);
-    let (part0, part1) = hash.split_at(16);
+pub fn h<T: AsRef<[u8]>>(r: T) -> Result<(ByteArray, ByteArray), Error> {
+    let hash = hash::sha3_256(r.as_ref());
+    let (part0, part1) = hash.safe_split_at(16)?;
 
-    (ByteArray::from_bytes(&part0), ByteArray::from_bytes(&part1))
+    Ok((ByteArray::from_bytes(&part0), ByteArray::from_bytes(&part1)))
 }
 
 /// Hash function => SHA3-512
-pub fn g(r: &ByteArray) -> (ByteArray, ByteArray) {
+pub fn g(r: &ByteArray) -> Result<(ByteArray, ByteArray), Error> {
     let hash = hash::sha3_512(&r.data);
-    let (part0, part1) = hash.split_at(32);
+    let (part0, part1) = hash.safe_split_at(32)?;
 
-    (ByteArray::from_bytes(&part0), ByteArray::from_bytes(&part1))
+    Ok((ByteArray::from_bytes(&part0), ByteArray::from_bytes(&part1)))
 }
 
 /// Key Derivation function => SHAKE-256

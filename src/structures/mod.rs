@@ -2,7 +2,7 @@
 //!
 //! Definiton of all structures used across the crate
 
-mod bytearray;
+pub(crate) mod bytearray;
 mod primefield;
 
 pub mod algebraics;

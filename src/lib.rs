@@ -15,14 +15,14 @@
 //! let kem = kyber512kem();
 //!
 //! // Alice runs keygen, publishes pk. Value sk is secret
-//! let (sk, pk) = kem.keygen();
+//! let (sk, pk) = kem.keygen().unwrap();
 //!
 //! // Bob uses pk3 to derive a key k and encapsulation c
-//! let (c, k) = kem.encaps(&pk);
+//! let (c, k) = kem.encaps(&pk).unwrap();
 //!
 //! // Bob sends c to Alice
 //! // Alice uses s, c, sk3 and pk3 to recover k
-//! let k_recovered = kem.decaps(&c, &sk);
+//! let k_recovered = kem.decaps(&c, &sk).unwrap();
 //!
 //! assert_eq!(k, k_recovered);
 //! ```
@@ -37,14 +37,14 @@
 //! let r = ByteArray::random(32);
 //!
 //! // Alice runs keygen, publishes pk. Value sk is secret
-//! let (sk, pk) = pke.keygen();
+//! let (sk, pk) = pke.keygen().unwrap();
 //!
 //! // Bob uses the public key to encrypt the message
-//! let enc = pke.encrypt(&pk, &m, r.clone());
+//! let enc = pke.encrypt(&pk, &m, &r).unwrap();
 //!
 //! // Bob sends enc to Alice
 //! // Alice uses the secret key to recover m
-//! let dec = pke.decrypt(&sk, &enc);
+//! let dec = pke.decrypt(&sk, &enc).unwrap();
 //!
 //! assert_eq!(m, dec);
 //! ```
@@ -79,4 +79,9 @@ pub const fn kyber768pke() -> PKE<256, 3> {
 /// Instantiate the Kyber 768 KEM with the appropriate parameters
 pub const fn kyber768kem() -> KEM<256, 3> {
     KEM::<256, 3>::init(kyber768pke(), 164, 1184, 2400, 1088)
+}
+
+#[derive(Debug)]
+pub enum Error {
+    Decrypt(String)
 }

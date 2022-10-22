@@ -2,14 +2,18 @@
 //!
 //! Utils to serialize/deserialize polynomial and polyvec
 
+use crate::Error;
 use crate::structures::{
     algebraics::{FiniteField, RingModule},
     ByteArray, Poly3329, PolyVec3329, F3329,
 };
 
+use crate::structures::bytearray::GetBit;
+use crate::structures::bytearray::SafeSplit;
+
 /// Deserialize ByteArray into Polynomial
 /// Algorithm 3 p. 8
-pub fn decode_to_poly<const N: usize>(bs: ByteArray, ell: usize) -> Poly3329<N> {
+pub fn decode_to_poly<const N: usize, T: AsRef<[u8]>>(bs: T, ell: usize) -> Poly3329<N> {
     let mut f = [F3329::zero(); N];
 
     for i in 0..N {
@@ -43,26 +47,46 @@ pub fn encode_poly<const N: usize>(p: Poly3329<N>, ell: usize) -> ByteArray {
         }
     }
     b.push(c);
-    ByteArray::from_bytes(b.as_slice())
+
+    ByteArray { data: b }
 }
 
 /// Deserialize ByteArray into PolyVec
-pub fn decode_to_polyvec<const N: usize, const D: usize>(
-    bs: ByteArray,
+pub fn decode_to_polyvec<const N: usize, const D: usize, T: AsRef<[u8]>>(
+    bs: T,
     ell: usize,
-) -> PolyVec3329<N, D> {
-    let k = bs.data.len() / (32 * ell);
-    let mut b = bs;
+) -> Result<PolyVec3329<N, D>, Error> {
+    let mut bs = bs.as_ref();
+    let mut p_vec = PolyVec3329::from_vec([Poly3329::init(); D]);
+
+    let mut init_split_pt = 0;
+    for i in 0..D {
+        let (_, c) = bs.safe_split_at(init_split_pt)?;
+        let (a, _) = c.safe_split_at(32*ell)?;
+        p_vec.set(i, decode_to_poly(a, ell));
+        init_split_pt += (32*ell);
+    }
+
+    Ok(p_vec)
+}
+
+/*pub fn decode_to_polyvec<const N: usize, const D: usize, T: AsRef<[u8]>>(
+    bs: T,
+    ell: usize,
+) -> Result<PolyVec3329<N, D>, Error> {
+    let bs = bs.as_ref();
+    //let k = bs.data.len() / (32 * ell);
+    let mut b = bs.to_vec();
     let mut p_vec = PolyVec3329::from_vec([Poly3329::init(); D]);
 
     for i in 0..D {
-        let (a, c) = b.split_at(32 * ell);
+        let (a, c) = b.safe_split_at(32 * ell)?;
         p_vec.set(i, decode_to_poly(a, ell));
-        b = c.clone();
+        b = c.to_vec();
     }
 
-    p_vec
-}
+    Ok(p_vec)
+}*/
 
 /// Serialize PolyVec into ByteArray
 pub fn encode_polyvec<const N: usize, const D: usize>(
@@ -73,7 +97,7 @@ pub fn encode_polyvec<const N: usize, const D: usize>(
 
     for i in 0..D {
         let p = p_vec.get(i);
-        b = b.append(&encode_poly(p, s));
+        b.append(&encode_poly(p, s));
     }
 
     b

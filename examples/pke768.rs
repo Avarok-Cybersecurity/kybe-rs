@@ -5,9 +5,9 @@ fn main() {
     let m = ByteArray::random(32);
     let r = ByteArray::random(32);
 
-    let (sk, pk) = pke.keygen();
-    let enc = pke.encrypt(&pk, &m, r.clone());
-    let dec = pke.decrypt(&sk, &enc);
+    let (sk, pk) = pke.keygen().unwrap();
+    let enc = pke.encrypt(&pk, &m, &r).unwrap();
+    let dec = pke.decrypt(&sk, &enc).unwrap();
 
     println!("{:?}", dec);
 }

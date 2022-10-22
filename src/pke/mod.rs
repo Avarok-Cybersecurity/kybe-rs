@@ -2,6 +2,7 @@
 //!
 //! Structure that handles all the parameters and functions required to perform the PKE
 
+use crate::Error;
 use crate::functions::{
     compress::*,
     encode::*,
@@ -12,6 +13,8 @@ use crate::structures::{
     algebraics::{FiniteRing, RingModule},
     ByteArray, PolyMatrix3329, PolyVec3329,
 };
+
+use crate::structures::bytearray::SafeSplit;
 
 /// Default length used for XOF
 const XOF_LEN: usize = 4000;
@@ -27,9 +30,9 @@ pub struct PKE<const N: usize, const K: usize> {
 impl<const N: usize, const K: usize> PKE<N, K> {
     /// Kyber CPAPKE Key Generation => (secret key, public key)
     /// Algorithm 4 p. 9
-    pub fn keygen(&self) -> (ByteArray, ByteArray) {
+    pub fn keygen(&self) -> Result<(ByteArray, ByteArray), Error> {
         let d = ByteArray::random(32);
-        let (rho, sigma) = g(&d);
+        let (rho, sigma) = g(&d)?;
 
         let mut a = PolyMatrix3329::init();
 
@@ -51,25 +54,31 @@ impl<const N: usize, const K: usize> PKE<N, K> {
 
         let t_hat = bcm_matrix_vec(&a, &s_hat).add(&e_hat);
 
-        let pk = encode_polyvec(t_hat, 12).append(&rho);
+        let mut pk = encode_polyvec(t_hat, 12);
+        pk.append(&rho);
+
         let sk = encode_polyvec(s_hat, 12);
 
-        (sk, pk)
+        Ok((sk, pk))
     }
 
     /// Kyber CPAPKE Encryption : public key, message, random coins => ciphertext
     /// Algorithm 5 p. 10
-    pub fn encrypt(&self, pk: &ByteArray, m: &ByteArray, r: &ByteArray) -> ByteArray {
+    pub fn encrypt<T: AsRef<[u8]>, R: AsRef<[u8]>, V: AsRef<[u8]>>(&self, pk: T, m: R, r: V) -> Result<ByteArray, Error> {
+        let pk = pk.as_ref();
+        let m = m.as_ref();
+        let r = r.as_ref();
+
         let offset = 12 * K * N / 8;
         let prf_len = 64 * self.eta;
 
-        let (t, rho) = pk.split_at(offset);
-        let t_hat = decode_to_polyvec(t, 12);
+        let (t, rho) = pk.safe_split_at(offset)?;
+        let t_hat = decode_to_polyvec(&t, 12)?;
         let mut a_t = PolyMatrix3329::init();
 
         for i in 0..K {
             for j in 0..K {
-                a_t.set(i, j, parse(&xof(&rho, i, j, XOF_LEN), self.q));
+                a_t.set(i, j, parse(&xof(rho, i, j, XOF_LEN), self.q));
             }
         }
 
@@ -86,32 +95,36 @@ impl<const N: usize, const K: usize> PKE<N, K> {
         let v = ntt_product_vec(&t_hat, &r_hat)
             .add(&e2)
             .add(&decompress_poly(
-                decode_to_poly::<N>(m.clone(), 1),
+                decode_to_poly::<N, _>(m, 1),
                 1,
                 self.q,
             ));
 
-        let c1 = encode_polyvec(compress_polyvec(u_bold, self.du, self.q), self.du);
+        let mut c1 = encode_polyvec(compress_polyvec(u_bold, self.du, self.q), self.du);
         let c2 = encode_poly(compress_poly(v, self.dv, self.q), self.dv);
 
-        c1.append(&c2)
+        c1.append(&c2);
+
+        Ok(c1)
     }
 
     /// Kyber CPAPKE Decryption : secret key, ciphertext => message
     /// Algorithm 6 p. 10
-    pub fn decrypt(&self, sk: &ByteArray, c: &ByteArray) -> ByteArray {
+    pub fn decrypt<T: AsRef<[u8]>, R: AsRef<[u8]>>(&self, sk: T, c: R) -> Result<ByteArray, Error> {
+        let sk = sk.as_ref();
+        let c = c.as_ref();
         let offset = self.du * K * N / 8;
-        let (c1, c2) = c.split_at(offset);
+        let (c1, c2) = c.safe_split_at(offset)?;
 
-        let u = decompress_polyvec(decode_to_polyvec::<N, K>(c1, self.du), self.du, self.q);
+        let u = decompress_polyvec(decode_to_polyvec::<N, K, _>(&c1, self.du)?, self.du, self.q);
         let v = decompress_poly(decode_to_poly(c2, self.dv), self.dv, self.q);
-        let s = decode_to_polyvec(sk.clone(), 12);
+        let s = decode_to_polyvec(sk, 12)?;
 
         let u_hat = ntt_vec(&u);
         let x = ntt_product_vec(&s, &u_hat);
         let p = v.sub(&x);
 
-        encode_poly(compress_poly(p, 1, self.q), 1)
+        Ok(encode_poly(compress_poly(p, 1, self.q), 1))
     }
 
     pub const fn init(q: usize, eta: usize, du: usize, dv: usize) -> Self {
@@ -122,25 +135,25 @@ impl<const N: usize, const K: usize> PKE<N, K> {
 #[test]
 fn pke_keygen_cpapke_512() {
     let pke = crate::kyber512pke();
-    pke.keygen();
+    pke.keygen().unwrap();
 }
 
 #[test]
 fn pke_keygen_cpapke_768() {
     let pke = crate::kyber768pke();
-    pke.keygen();
+    pke.keygen().unwrap();
 }
 
 #[test]
 fn encrypt_then_decrypt_cpapke_512() {
     let pke = crate::kyber512pke();
-    let (sk, pk) = pke.keygen();
+    let (sk, pk) = pke.keygen().unwrap();
 
     let m = ByteArray::random(32);
     let r = ByteArray::random(32);
 
-    let enc = pke.encrypt(&pk, &m, r);
-    let dec = pke.decrypt(&sk, &enc);
+    let enc = pke.encrypt(&pk, &m, &r).unwrap();
+    let dec = pke.decrypt(&sk, &enc).unwrap();
 
     assert_eq!(m, dec);
 }
@@ -148,13 +161,48 @@ fn encrypt_then_decrypt_cpapke_512() {
 #[test]
 fn encrypt_then_decrypt_cpapke_768() {
     let pke = crate::kyber768pke();
-    let (sk, pk) = pke.keygen();
+    let (sk, pk) = pke.keygen().unwrap();
 
     let m = ByteArray::random(32);
     let r = ByteArray::random(32);
 
-    let enc = pke.encrypt(&pk, &m, r);
-    let dec = pke.decrypt(&sk, &enc);
+    let enc = pke.encrypt(&pk, &m, &r).unwrap();
+    let dec = pke.decrypt(&sk, &enc).unwrap();
 
     assert_eq!(m, dec);
+}
+
+#[test]
+fn encrypt_then_decrypt_cpapke_768_fail() {
+    let pke = crate::kyber768pke();
+    let (mut sk, pk) = pke.keygen().unwrap();
+
+    let m = ByteArray::random(32);
+    let r = ByteArray::random(32);
+
+    let enc = pke.encrypt(&pk, &m, &r).unwrap();
+
+    // alter the SK's first byte
+    sk.data[0] = sk.data[0].wrapping_add(1);
+    let dec = pke.decrypt(&sk, &enc).unwrap();
+
+    assert_ne!(m, dec);
+}
+
+
+#[test]
+fn encrypt_then_decrypt_cpapke_768_fail2() {
+    let pke = crate::kyber768pke();
+    let (sk, pk) = pke.keygen().unwrap();
+
+    let m = ByteArray::random(32);
+    let r = ByteArray::random(32);
+
+    let mut enc = pke.encrypt(&pk, &m, &r).unwrap();
+
+    // alter the enc's first byte
+    enc.data[10] = enc.data[10].wrapping_add(99);
+    let dec = pke.decrypt(&sk, &enc).unwrap();
+
+    assert_ne!(m, dec);
 }
