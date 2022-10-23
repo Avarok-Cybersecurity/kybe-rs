@@ -155,7 +155,7 @@ where
 {
     /// Init polynomial with a default value
     pub fn init() -> Self {
-        Self::from_vec([Default::default(); N])
+        Self::from_vec(256 - 1, [Default::default(); N])
     }
 
     /// Return dimension of the Rq module
@@ -164,13 +164,13 @@ where
     }
 
     /// Init polynomial with specified coefficients
-    /// If the array is bigger than N, only the first N values are taken
-    pub fn from_vec(coefficients: [T; N]) -> Self {
-        // Reduce degree if appropriate
-        let mut degree = N - 1;
+    pub fn from_vec(degree: usize, coefficients: [T; N]) -> Self {
+        // Reduce degree as necessary
+        /*let mut degree = N - 1;
+
         while degree > 0 && coefficients[degree].eq(&T::zero()) {
             degree -= 1;
-        }
+        }*/
 
         // Check for null polynomial (shouldn't happen but still)
         if degree == 0 && coefficients[0].eq(&T::zero()) {
@@ -202,7 +202,7 @@ where
         for (i, el) in v.iter_mut().enumerate().take(degree) {
             *el = self.coefficients[i].mul(other)
         }
-        Self::from_vec(v)
+        Self::from_vec(N - 1, v)
     }
 
     /// Set a coefficient of the polynomial, recalculates the degree

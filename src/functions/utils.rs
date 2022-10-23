@@ -39,17 +39,17 @@ pub fn parse<const N: usize>(bs: &ByteArray, q: usize) -> Poly3329<N> {
 /// Centered Binomial Distribution
 /// Algorithm 2 p. 8
 /// Takes as input an array of 64 eta bytes
-pub fn cbd<const N: usize>(bs: ByteArray, eta: usize) -> Poly3329<N> {
+pub fn cbd<const N: usize>(bs: ByteArray, eta: usize) -> Result<Poly3329<N>, Error> {
     let mut p = Poly3329::init();
     for i in 0..N {
         let mut a = 0;
         let mut b = 0;
 
         for j in 0..eta {
-            if bs.get_bit(2 * i * eta + j) {
+            if bs.get_bit((2 * i * eta) + j)? {
                 a += 1;
             }
-            if bs.get_bit(2 * i * eta + eta + j) {
+            if bs.get_bit((2 * i * eta) + eta + j)? {
                 b += 1;
             }
         }
@@ -57,7 +57,7 @@ pub fn cbd<const N: usize>(bs: ByteArray, eta: usize) -> Poly3329<N> {
         p.set_coeff(i, a_hat.sub(&b_hat));
     }
 
-    p
+    Ok(p)
 }
 
 /// Pseudo random function => SHAKE-256(s||b);

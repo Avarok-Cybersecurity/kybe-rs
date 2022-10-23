@@ -195,7 +195,7 @@ fn rev_ntt<const N: usize>(p_hat: &Poly3329<N>) -> Poly3329<N> {
 
 #[test]
 fn rev_then_ntt() {
-    let mut u_bold = Poly3329::from_vec([Default::default(); 256]);
+    let mut u_bold = Poly3329::from_vec(256 - 1, [Default::default(); 256]);
     for i in 0..256 {
         u_bold.set_coeff(i, F3329::from_int(i));
     }
@@ -206,7 +206,7 @@ fn rev_then_ntt() {
 
 #[test]
 fn ntt_then_rev() {
-    let mut u = Poly3329::from_vec([Default::default(); 256]);
+    let mut u = Poly3329::from_vec(256 - 1, [Default::default(); 256]);
     for i in 0..256 {
         u.set_coeff(i, F3329::from_int(i));
     }

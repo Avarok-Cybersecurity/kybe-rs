@@ -13,26 +13,41 @@ use crate::structures::bytearray::SafeSplit;
 
 /// Deserialize ByteArray into Polynomial
 /// Algorithm 3 p. 8
-pub fn decode_to_poly<const N: usize, T: AsRef<[u8]>>(bs: T, ell: usize) -> Poly3329<N> {
+pub fn decode_to_poly<const N: usize, T: AsRef<[u8]>>(
+    bs: T,
+    ell: usize,
+) -> Result<Poly3329<N>, Error> {
     let mut f = [F3329::zero(); N];
+
+    let mut degree = 0;
 
     for i in 0..N {
         for j in 0..ell {
-            if bs.get_bit(i * ell + j) {
+            let mut pos = (i * ell) + j;
+            if bs.as_ref() == &[2] {
+                println!("STATS: i={i}, j={j}, pos={pos}, ell={ell}")
+            }
+            if let Ok(true) = bs.get_bit(pos) {
                 f[i] = f[i].add(&F3329::from_int(1 << j));
+                degree += 1;
             }
         }
     }
-    Poly3329::from_vec(f)
+
+    println!("degree = {degree}");
+
+    Ok(Poly3329::from_vec(degree, f))
 }
 
 /// Serialize Poly into ByteArray
-pub fn encode_poly<const N: usize>(p: Poly3329<N>, ell: usize) -> ByteArray {
+pub fn encode_poly<const N: usize>(p: Poly3329<N>, ell: usize, trim: bool) -> ByteArray {
     // TODO: in-place
     let mut b = vec![];
     let mut c: u8 = 0;
 
-    for i in 0..N {
+    let len = div_ceil(p.degree.unwrap_or(0), 8);
+
+    'outer: for i in 0..N {
         let mut v = p[i].to_int();
         for j in 0..ell {
             let s = (i * ell + j) % 8;
@@ -49,7 +64,18 @@ pub fn encode_poly<const N: usize>(p: Poly3329<N>, ell: usize) -> ByteArray {
     }
     b.push(c);
 
+    println!("Ret = {:?} | p.degree = {:?}, p.coeffients = {:?}", b, p.degree, p.coefficients);
+    println!("Suspected len = {}", len);
+
+    if trim {
+        b.truncate(len);
+    }
+
     ByteArray { data: b }
+}
+
+fn div_ceil(a: usize, b: usize) -> usize {
+    (a + b - 1) / b
 }
 
 /// Deserialize ByteArray into PolyVec
@@ -64,7 +90,7 @@ pub fn decode_to_polyvec<const N: usize, const D: usize, T: AsRef<[u8]>>(
     for i in 0..D {
         let (_, c) = bs.safe_split_at(init_split_pt)?;
         let (a, _) = c.safe_split_at(32 * ell)?;
-        p_vec.set(i, decode_to_poly(a, ell));
+        p_vec.set(i, decode_to_poly(a, ell)?);
         init_split_pt += 32 * ell;
     }
 
@@ -98,7 +124,7 @@ pub fn encode_polyvec<const N: usize, const D: usize>(
 
     for i in 0..D {
         let p = p_vec.get(i);
-        b.append(&encode_poly(p, s));
+        b.append(&encode_poly(p, s, false));
     }
 
     b
@@ -106,8 +132,8 @@ pub fn encode_polyvec<const N: usize, const D: usize>(
 
 #[test]
 fn encode_decode_poly() {
-    let original = Poly3329::from_vec([Default::default(); 256]);
-    let encoded = encode_poly(original.clone(), 12);
-    let decoded = decode_to_poly(encoded, 12);
+    let original = Poly3329::from_vec(0, [Default::default(); 256]);
+    let encoded = encode_poly(original.clone(), 12, false);
+    let decoded = decode_to_poly(encoded, 12).unwrap();
     assert!(decoded == original);
 }

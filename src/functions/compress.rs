@@ -3,6 +3,7 @@
 //! Utils for compressing/decompressing integers, polynomials and polyvec
 
 use crate::structures::{Poly3329, PolyVec3329, F3329};
+use crate::structures::algebraics::FiniteField;
 
 /// Compress function on coefficients, p. 6
 fn compress_integer(x: usize, d: usize, q: usize) -> usize {
@@ -26,7 +27,7 @@ pub fn compress_poly<const N: usize>(x: Poly3329<N>, d: usize, q: usize) -> Poly
     for (i, el) in coeffs.iter_mut().enumerate() {
         *el = F3329::from_int(compress_integer(x[i].to_int(), d, q));
     }
-    Poly3329::from_vec(coeffs)
+    Poly3329::from_vec(coeffs.len() - 1, coeffs)
 }
 
 /// Deompress function on R_q
@@ -35,7 +36,7 @@ pub fn decompress_poly<const N: usize>(x: Poly3329<N>, d: usize, q: usize) -> Po
     for (i, el) in coeffs.iter_mut().enumerate() {
         *el = F3329::from_int(decompress_integer(x[i].to_int(), d, q));
     }
-    Poly3329::from_vec(coeffs)
+    Poly3329::from_vec(coeffs.len() - 1, coeffs)
 }
 
 /// Compress function on R_q^k
@@ -66,7 +67,7 @@ pub fn decompress_polyvec<const N: usize, const D: usize>(
 
 #[test]
 fn compress_decompress_poly() {
-    let original = Poly3329::from_vec([Default::default(); 256]);
+    let original = Poly3329::from_vec(256 - 1, [Default::default(); 256]);
     let encoded = compress_poly(original.clone(), 12, 3329);
     let decoded = decompress_poly(encoded, 12, 3329);
     assert!(decoded == original);

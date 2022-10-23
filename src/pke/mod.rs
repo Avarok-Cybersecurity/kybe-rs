@@ -46,8 +46,8 @@ impl<const N: usize, const K: usize> PKE<N, K> {
         let prf_len = 64 * eta_1;
 
         for i in 0..K {
-            s.set(i, cbd(prf(&sigma, i, prf_len), eta_1));
-            e.set(i, cbd::<N>(prf(&sigma, K + i, prf_len), eta_1));
+            s.set(i, cbd(prf(&sigma, i, prf_len), eta_1)?);
+            e.set(i, cbd::<N>(prf(&sigma, K + i, prf_len), eta_1)?);
         }
         let s_hat = ntt_vec(&s);
         let e_hat = ntt_vec(&e);
@@ -92,24 +92,28 @@ impl<const N: usize, const K: usize> PKE<N, K> {
 
         let (mut r_bold, mut e1) = (PolyVec3329::<N, K>::init(), PolyVec3329::<N, K>::init());
         for i in 0..K {
-            r_bold.set(i, cbd(prf(&r, i, prf1_len), eta_1));
-            e1.set(i, cbd(prf(&r, K + i, prf2_len), eta_2));
+            r_bold.set(i, cbd(prf(&r, i, prf1_len), eta_1)?);
+            e1.set(i, cbd(prf(&r, K + i, prf2_len), eta_2)?);
         }
-        let e2 = cbd(prf(&r, 2 * K, prf2_len), eta_2);
+        let e2 = cbd(prf(&r, 2 * K, prf2_len), eta_2)?;
 
         let r_hat = ntt_vec(&r_bold);
         let u_bold = ntt_product_matvec(&a_t, &r_hat).add(&e1);
 
+        let x = decode_to_poly::<N, _>(m, 1)?;
+        println!("Mapping {:?} to degree={:?}, coefficients={:?}", m, x.degree, x.coefficients);
+
+
         let v = ntt_product_vec(&t_hat, &r_hat)
             .add(&e2)
             .add(&decompress_poly(
-                decode_to_poly::<N, _>(m.clone(), 1),
+                x,
                 1,
                 self.q,
             ));
 
         let mut c1 = encode_polyvec(compress_polyvec(u_bold, du, self.q), du);
-        let c2 = encode_poly(compress_poly(v, dv, self.q), dv);
+        let c2 = encode_poly(compress_poly(v, dv, self.q), dv, false);
 
         c1.append(&c2);
 
@@ -128,12 +132,14 @@ impl<const N: usize, const K: usize> PKE<N, K> {
         let (c1, c2) = c.safe_split_at(offset)?;
 
         let u = decompress_polyvec(decode_to_polyvec::<N, K, _>(c1, du)?, du, self.q);
-        let v = decompress_poly(decode_to_poly(c2, dv), dv, self.q);
+        let v = decompress_poly(decode_to_poly(c2, dv)?, dv, self.q);
         let s = decode_to_polyvec(sk.clone(), 12)?;
 
         let m = v.sub(&ntt_product_vec(&s, &ntt_vec(&u)));
 
-        Ok(encode_poly(compress_poly(m, 1, self.q), 1))
+        let ret = encode_poly(compress_poly(m, 1, self.q), 1, true);
+        println!("ret.len = {} || c1.len = {} || c2.len = {}", ret.as_ref().len(), c1.len(), c2.len());
+        Ok(ret)
     }
 
     pub const fn init(q: usize, eta: (usize, usize), d: (usize, usize)) -> Self {
