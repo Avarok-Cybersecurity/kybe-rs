@@ -250,3 +250,34 @@ fn encrypt_then_decrypt_cpapke_768_fail2() {
 
     assert_ne!(m, dec);
 }
+
+#[test]
+fn encrypt_then_decrypt_cpapke_1024() {
+    let pke = crate::kyber1024pke();
+    let (sk, pk) = pke.keygen().unwrap();
+
+    let m = ByteArray::random(32);
+    let r = ByteArray::random(32);
+
+    let enc = pke.encrypt(&pk, &m, &r).unwrap();
+    let dec = pke.decrypt(&sk, &enc).unwrap();
+
+    assert_eq!(m, dec);
+}
+
+#[test]
+fn encrypt_then_decrypt_cpapke_1024_fail() {
+    let pke = crate::kyber1024pke();
+    let (mut sk, pk) = pke.keygen().unwrap();
+
+    let m = ByteArray::random(32);
+    let r = ByteArray::random(32);
+
+    let enc = pke.encrypt(&pk, &m, &r).unwrap();
+
+    // alter the SK's first byte
+    sk.data[0] = sk.data[0].wrapping_add(1);
+    let dec = pke.decrypt(&sk, &enc).unwrap();
+
+    assert_ne!(m, dec);
+}
