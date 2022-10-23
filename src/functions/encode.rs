@@ -32,7 +32,7 @@ pub fn encode_poly<const N: usize>(p: Poly3329<N>, ell: usize) -> ByteArray {
     let mut b = vec![];
     let mut c: u8 = 0;
 
-    for i in 0..256 {
+    for i in 0..N {
         let mut v = p[i].to_int();
         for j in 0..ell {
             let s = (i * ell + j) % 8;
@@ -65,7 +65,7 @@ pub fn decode_to_polyvec<const N: usize, const D: usize, T: AsRef<[u8]>>(
         let (_, c) = bs.safe_split_at(init_split_pt)?;
         let (a, _) = c.safe_split_at(32 * ell)?;
         p_vec.set(i, decode_to_poly(a, ell));
-        init_split_pt += (32 * ell);
+        init_split_pt += 32 * ell;
     }
 
     Ok(p_vec)

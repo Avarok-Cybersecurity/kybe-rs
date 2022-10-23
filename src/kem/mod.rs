@@ -9,9 +9,11 @@ use crate::Error;
 
 use crate::structures::bytearray::SafeSplit;
 
+#[derive(Clone, Copy)]
 pub struct KEM<const N: usize, const K: usize> {
     pke: PKE<N, K>,
     delta: usize,
+    ss_size: usize,
     pk_size: usize,
     sk_size: usize,
     ct_size: usize,
@@ -78,19 +80,15 @@ impl<const N: usize, const K: usize> KEM<N, K> {
         Ok(ret)
     }
 
-    pub const fn init(
-        pke: PKE<N, K>,
-        delta: usize,
-        pk_size: usize,
-        sk_size: usize,
-        ct_size: usize,
-    ) -> Self {
+    pub const fn init(pke: PKE<N, K>, delta: usize, ss_size: usize, d: (usize, usize)) -> Self {
+        let (du, dv) = d;
         Self {
             pke,
             delta,
-            pk_size,
-            sk_size,
-            ct_size,
+            ss_size,
+            pk_size: 12 * K * N / 8 + 32,
+            sk_size: 12 * K * N / 8,
+            ct_size: (du * K + dv) * N / 8,
         }
     }
 }
