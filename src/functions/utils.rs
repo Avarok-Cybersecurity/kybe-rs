@@ -86,7 +86,7 @@ pub fn h<T: AsRef<[u8]>>(r: T) -> Result<(ByteArray, ByteArray), Error> {
     let hash = hash::sha3_256(r.as_ref());
     let (part0, part1) = hash.safe_split_at(16)?;
 
-    Ok((ByteArray::from_bytes(&part0), ByteArray::from_bytes(&part1)))
+    Ok((ByteArray::from_bytes(part0), ByteArray::from_bytes(part1)))
 }
 
 /// Hash function => SHA3-512
@@ -94,7 +94,7 @@ pub fn g(r: &ByteArray) -> Result<(ByteArray, ByteArray), Error> {
     let hash = hash::sha3_512(&r.data);
     let (part0, part1) = hash.safe_split_at(32)?;
 
-    Ok((ByteArray::from_bytes(&part0), ByteArray::from_bytes(&part1)))
+    Ok((ByteArray::from_bytes(part0), ByteArray::from_bytes(part1)))
 }
 
 /// Key Derivation function => SHAKE-256

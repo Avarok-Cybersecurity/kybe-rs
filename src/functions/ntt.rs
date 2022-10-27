@@ -76,7 +76,7 @@ pub fn bcm_matrix_vec<const N: usize, const X: usize, const Y: usize>(
     let mut v = PolyVec3329::init();
 
     for i in 0..Y {
-        v.set(i, bcm_vec(&a.row(i), &b))
+        v.set(i, bcm_vec(&a.row(i), b))
     }
 
     v

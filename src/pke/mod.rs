@@ -14,7 +14,7 @@ use crate::structures::{
 };
 use crate::Error;
 use byteorder::{ByteOrder, NetworkEndian, WriteBytesExt};
-use std::io::Write;
+
 
 use crate::structures::bytearray::SafeSplit;
 
@@ -164,7 +164,7 @@ impl<const N: usize, const K: usize> PKE<N, K> {
         // The final 8 bytes are for the original length of the plaintext
         let split_pt = ciphertext.len() - 8;
         if split_pt > ciphertext.len() {
-            return Err(Error::Decrypt(format!("Invalid ciphertext input length")));
+            return Err(Error::Decrypt("Invalid ciphertext input length".to_string()));
         }
 
         let (concatenated_ciphertexts, field_length_be) = ciphertext.split_at(split_pt);

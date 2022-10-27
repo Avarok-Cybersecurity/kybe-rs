@@ -2,7 +2,7 @@
 //!
 //! Utils for compressing/decompressing integers, polynomials and polyvec
 
-use crate::structures::algebraics::FiniteField;
+
 use crate::structures::{Poly3329, PolyVec3329, F3329};
 
 /// Compress function on coefficients, p. 6
@@ -68,7 +68,7 @@ pub fn decompress_polyvec<const N: usize, const D: usize>(
 #[test]
 fn compress_decompress_poly() {
     let original = Poly3329::from_vec(256 - 1, [Default::default(); 256]);
-    let encoded = compress_poly(original.clone(), 12, 3329);
+    let encoded = compress_poly(original, 12, 3329);
     let decoded = decompress_poly(encoded, 12, 3329);
     assert!(decoded == original);
 }

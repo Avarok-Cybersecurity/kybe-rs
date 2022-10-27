@@ -17,7 +17,7 @@ mod tests {
                 let pke_ct = pke512
                     .encrypt(&pk_pke_512, &random_message, &nonce)
                     .unwrap();
-                let mut pke_decrypted_ct = pke512.decrypt(&sk_pke_512, &pke_ct).unwrap();
+                let pke_decrypted_ct = pke512.decrypt(&sk_pke_512, &pke_ct).unwrap();
                 //pke_decrypted_ct.data.truncate(len);
                 assert_eq!(
                     random_message.as_ref(),
