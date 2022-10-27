@@ -13,6 +13,8 @@ use crate::structures::{
     ByteArray, PolyMatrix3329, PolyVec3329,
 };
 use crate::Error;
+use byteorder::{ByteOrder, NetworkEndian, WriteBytesExt};
+use std::io::Write;
 
 use crate::structures::bytearray::SafeSplit;
 
@@ -25,6 +27,8 @@ pub struct PKE<const N: usize, const K: usize> {
     q: usize,
     pub d: (usize, usize),
 }
+
+const KYBER_BLOCK_SIZE: usize = 32;
 
 impl<const N: usize, const K: usize> PKE<N, K> {
     /// Kyber CPAPKE Key Generation => (secret key, public key)
@@ -62,9 +66,36 @@ impl<const N: usize, const K: usize> PKE<N, K> {
         Ok((sk, pk))
     }
 
+    pub fn encrypt<T: AsRef<[u8]>, R: AsRef<[u8]>, V: AsRef<[u8]>>(
+        &self,
+        public_key: T,
+        plaintext: R,
+        nonce: V,
+    ) -> Result<ByteArray, Error> {
+        let public_key = public_key.as_ref();
+        let nonce = nonce.as_ref();
+        let plaintext = plaintext.as_ref();
+
+        let mut ret = ByteArray::new();
+
+        let chunks = plaintext.chunks(KYBER_BLOCK_SIZE);
+
+        for chunk in chunks {
+            ret.data
+                .extend_from_slice(self.encrypt_block(public_key, chunk, nonce)?.as_ref());
+        }
+
+        // append the plaintext len
+        ret.data
+            .write_u64::<NetworkEndian>(plaintext.len() as u64)
+            .unwrap();
+
+        Ok(ret)
+    }
+
     /// Kyber CPAPKE Encryption : public key, message, random coins => ciphertext
     /// Algorithm 5 p. 10
-    pub fn encrypt<T: AsRef<[u8]>, R: AsRef<[u8]>, V: AsRef<[u8]>>(
+    pub fn encrypt_block<T: AsRef<[u8]>, R: AsRef<[u8]>, V: AsRef<[u8]>>(
         &self,
         pk: T,
         m: R,
@@ -73,6 +104,11 @@ impl<const N: usize, const K: usize> PKE<N, K> {
         let pk = pk.as_ref();
         let m = m.as_ref();
         let r = r.as_ref();
+
+        /*
+        if m.len() > KYBER_BLOCK_SIZE {
+            return Err(Error::Encrypt(format!("Input of len {} exceeds {} byte block length limit", m.len(), KYBER_BLOCK_SIZE)))
+        }*/
 
         let offset = 12 * K * N / 8;
         let (eta_1, eta_2) = self.eta;
@@ -101,28 +137,62 @@ impl<const N: usize, const K: usize> PKE<N, K> {
         let u_bold = ntt_product_matvec(&a_t, &r_hat).add(&e1);
 
         let x = decode_to_poly::<N, _>(m, 1)?;
-        println!("Mapping {:?} to degree={:?}, coefficients={:?}", m, x.degree, x.coefficients);
-
 
         let v = ntt_product_vec(&t_hat, &r_hat)
             .add(&e2)
-            .add(&decompress_poly(
-                x,
-                1,
-                self.q,
-            ));
+            .add(&decompress_poly(x, 1, self.q));
 
         let mut c1 = encode_polyvec(compress_polyvec(u_bold, du, self.q), du);
-        let c2 = encode_poly(compress_poly(v, dv, self.q), dv, false);
+        let c2 = encode_poly(compress_poly(v, dv, self.q), dv);
 
         c1.append(&c2);
 
         Ok(c1)
     }
 
+    pub fn decrypt<T: AsRef<[u8]>, R: AsRef<[u8]>>(
+        &self,
+        secret_key: T,
+        ciphertext: R,
+    ) -> Result<ByteArray, Error> {
+        let ciphertext = ciphertext.as_ref();
+        let secret_key = secret_key.as_ref();
+        let (du, dv) = self.d;
+        // calculate the length of each block
+        let ciphertext_block_len = (du * K * N / 8) + (dv * N / 8);
+
+        // The final 8 bytes are for the original length of the plaintext
+        let split_pt = ciphertext.len() - 8;
+        if split_pt > ciphertext.len() {
+            return Err(Error::Decrypt(format!("Invalid ciphertext input length")));
+        }
+
+        let (concatenated_ciphertexts, field_length_be) = ciphertext.split_at(split_pt);
+        let plaintext_length = byteorder::NetworkEndian::read_u64(field_length_be) as usize;
+
+        let mut ret = ByteArray {
+            data: Vec::with_capacity(plaintext_length),
+        };
+        // split the concatenated ciphertexts
+        for chunk in concatenated_ciphertexts.chunks(ciphertext_block_len) {
+            let plaintext = self.decrypt_block(secret_key, chunk)?;
+            ret.data.extend_from_slice(plaintext.as_ref());
+        }
+
+        // finally, truncate the vec, as the final block is 32 in length, and may be more
+        // than what the plaintext requires
+        ret.data.truncate(plaintext_length);
+
+        Ok(ret)
+    }
+
     /// Kyber CPAPKE Decryption : secret key, ciphertext => message
     /// Algorithm 6 p. 10
-    pub fn decrypt<T: AsRef<[u8]>, R: AsRef<[u8]>>(&self, sk: T, c: R) -> Result<ByteArray, Error> {
+    pub fn decrypt_block<T: AsRef<[u8]>, R: AsRef<[u8]>>(
+        &self,
+        sk: T,
+        c: R,
+    ) -> Result<ByteArray, Error> {
         let sk = sk.as_ref();
         let c = c.as_ref();
 
@@ -137,8 +207,7 @@ impl<const N: usize, const K: usize> PKE<N, K> {
 
         let m = v.sub(&ntt_product_vec(&s, &ntt_vec(&u)));
 
-        let ret = encode_poly(compress_poly(m, 1, self.q), 1, true);
-        println!("ret.len = {} || c1.len = {} || c2.len = {}", ret.as_ref().len(), c1.len(), c2.len());
+        let ret = encode_poly(compress_poly(m, 1, self.q), 1);
         Ok(ret)
     }
 
@@ -167,8 +236,8 @@ fn encrypt_then_decrypt_cpapke_512() {
     let m = ByteArray::random(32);
     let r = ByteArray::random(32);
 
-    let enc = pke.encrypt(&pk, &m, &r).unwrap();
-    let dec = pke.decrypt(&sk, &enc).unwrap();
+    let enc = pke.encrypt_block(&pk, &m, &r).unwrap();
+    let dec = pke.decrypt_block(&sk, &enc).unwrap();
 
     assert_eq!(m, dec);
 }
@@ -181,11 +250,11 @@ fn encrypt_then_decrypt_cpapke_512_fail() {
     let m = ByteArray::random(32);
     let r = ByteArray::random(32);
 
-    let enc = pke.encrypt(&pk, &m, &r).unwrap();
+    let enc = pke.encrypt_block(&pk, &m, &r).unwrap();
 
     // alter the SK's first byte
     sk.data[0] = sk.data[0].wrapping_add(1);
-    let dec = pke.decrypt(&sk, &enc).unwrap();
+    let dec = pke.decrypt_block(&sk, &enc).unwrap();
 
     assert_ne!(m, dec);
 }
@@ -198,12 +267,12 @@ fn encrypt_then_decrypt_cpapke_512_fail2() {
     let m = ByteArray::random(32);
     let r = ByteArray::random(32);
 
-    let mut enc = pke.encrypt(&pk, &m, &r).unwrap();
+    let mut enc = pke.encrypt_block(&pk, &m, &r).unwrap();
 
     // alter the enc's first byte
     let len = enc.data.len();
     enc.data[len - 1] = enc.data[len - 1].wrapping_add(200);
-    let dec = pke.decrypt(&sk, &enc).unwrap();
+    let dec = pke.decrypt_block(&sk, &enc).unwrap();
 
     assert_ne!(m, dec);
 }
@@ -216,8 +285,8 @@ fn encrypt_then_decrypt_cpapke_768() {
     let m = ByteArray::random(32);
     let r = ByteArray::random(32);
 
-    let enc = pke.encrypt(&pk, &m, &r).unwrap();
-    let dec = pke.decrypt(&sk, &enc).unwrap();
+    let enc = pke.encrypt_block(&pk, &m, &r).unwrap();
+    let dec = pke.decrypt_block(&sk, &enc).unwrap();
 
     assert_eq!(m, dec);
 }
@@ -230,11 +299,11 @@ fn encrypt_then_decrypt_cpapke_768_fail() {
     let m = ByteArray::random(32);
     let r = ByteArray::random(32);
 
-    let enc = pke.encrypt(&pk, &m, &r).unwrap();
+    let enc = pke.encrypt_block(&pk, &m, &r).unwrap();
 
     // alter the SK's first byte
     sk.data[0] = sk.data[0].wrapping_add(1);
-    let dec = pke.decrypt(&sk, &enc).unwrap();
+    let dec = pke.decrypt_block(&sk, &enc).unwrap();
 
     assert_ne!(m, dec);
 }
@@ -247,12 +316,12 @@ fn encrypt_then_decrypt_cpapke_768_fail2() {
     let m = ByteArray::random(32);
     let r = ByteArray::random(32);
 
-    let mut enc = pke.encrypt(&pk, &m, &r).unwrap();
+    let mut enc = pke.encrypt_block(&pk, &m, &r).unwrap();
 
     // alter the enc's first byte
     let len = enc.data.len();
     enc.data[len - 1] = enc.data[len - 1].wrapping_add(200);
-    let dec = pke.decrypt(&sk, &enc).unwrap();
+    let dec = pke.decrypt_block(&sk, &enc).unwrap();
 
     assert_ne!(m, dec);
 }
@@ -265,8 +334,8 @@ fn encrypt_then_decrypt_cpapke_1024() {
     let m = ByteArray::random(32);
     let r = ByteArray::random(32);
 
-    let enc = pke.encrypt(&pk, &m, &r).unwrap();
-    let dec = pke.decrypt(&sk, &enc).unwrap();
+    let enc = pke.encrypt_block(&pk, &m, &r).unwrap();
+    let dec = pke.decrypt_block(&sk, &enc).unwrap();
 
     assert_eq!(m, dec);
 }
@@ -279,11 +348,11 @@ fn encrypt_then_decrypt_cpapke_1024_fail() {
     let m = ByteArray::random(32);
     let r = ByteArray::random(32);
 
-    let enc = pke.encrypt(&pk, &m, &r).unwrap();
+    let enc = pke.encrypt_block(&pk, &m, &r).unwrap();
 
     // alter the SK's first byte
     sk.data[0] = sk.data[0].wrapping_add(1);
-    let dec = pke.decrypt(&sk, &enc).unwrap();
+    let dec = pke.decrypt_block(&sk, &enc).unwrap();
 
     assert_ne!(m, dec);
 }

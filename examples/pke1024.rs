@@ -6,8 +6,8 @@ fn main() {
     let r = ByteArray::random(32);
 
     let (sk, pk) = pke.keygen().unwrap();
-    let enc = pke.encrypt(&pk, &m, r.clone()).unwrap();
-    let dec = pke.decrypt(&sk, &enc).unwrap();
+    let enc = pke.encrypt_block(&pk, &m, r.clone()).unwrap();
+    let dec = pke.decrypt_block(&sk, &enc).unwrap();
 
     println!("{:?}", dec);
 }

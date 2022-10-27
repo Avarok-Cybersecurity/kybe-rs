@@ -164,13 +164,13 @@ where
     }
 
     /// Init polynomial with specified coefficients
-    pub fn from_vec(degree: usize, coefficients: [T; N]) -> Self {
+    pub fn from_vec(_degree: usize, coefficients: [T; N]) -> Self {
         // Reduce degree as necessary
-        /*let mut degree = N - 1;
+        let mut degree = N - 1;
 
         while degree > 0 && coefficients[degree].eq(&T::zero()) {
             degree -= 1;
-        }*/
+        }
 
         // Check for null polynomial (shouldn't happen but still)
         if degree == 0 && coefficients[0].eq(&T::zero()) {

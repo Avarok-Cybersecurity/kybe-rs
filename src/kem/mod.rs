@@ -32,20 +32,32 @@ impl<const N: usize, const K: usize> KEM<N, K> {
         Ok((sk, pk))
     }
 
-    /// Encryption : public key  => ciphertext, Shared Key
-    /// Algorithm 8 p. 11
     pub fn encaps(&self, pk: &ByteArray) -> Result<(ByteArray, ByteArray), Error> {
         let m = ByteArray::random(32);
-        let (mut m1, m2) = h(&m)?;
-        let (h1, h2) = h(pk)?;
-        let (k_bar, r) = g(&ByteArray::concat(&[&m1, &m2, &h1, &h2]))?;
+        self.encaps_with_seed(pk, m)
+    }
 
+    /// Encryption : public key  => ciphertext, Shared Key
+    /// Algorithm 8 p. 11
+    pub fn encaps_with_seed(
+        &self,
+        pk: &ByteArray,
+        m: ByteArray,
+    ) -> Result<(ByteArray, ByteArray), Error> {
+        let (mut m1, m2) = h(&m)?;
         m1.append(&m2);
 
-        let c = self.pke.encrypt(pk, &m1, &r)?;
+        let (mut h1, h2) = h(pk)?;
+        h1.append(h2);
 
-        let (h1, h2) = h(&c)?;
-        let k = kdf(&ByteArray::concat(&[&k_bar, &h1, &h2]), self.sk_size);
+        let (k_bar, r) = g(&ByteArray::concat(&[&m1, &h1]))?;
+
+        let c = self.pke.encrypt_block(pk, &m1, &r)?;
+
+        let (mut h1, h2) = h(&c)?;
+        h1.append(h2);
+
+        let k = kdf(&ByteArray::concat(&[&k_bar, &h1]), self.sk_size);
 
         Ok((c, k))
     }
@@ -61,11 +73,13 @@ impl<const N: usize, const K: usize> KEM<N, K> {
         let (pk, rem) = rem.safe_split_at(12 * K * N / 8 + 32)?;
         let (hash, z) = rem.safe_split_at(32)?;
 
-        let mut m = self.pke.decrypt(&sk_prime, c)?;
+        let mut m = self.pke.decrypt_block(&sk_prime, c)?;
+        println!("m.len() = {}", m.data.len());
         m.append(&hash);
+        println!("m.len() = {}", m.data.len());
 
         let (k_bar, r) = g(&m)?;
-        let c_prime = self.pke.encrypt(&pk, &m, &r)?;
+        let c_prime = self.pke.encrypt_block(&pk, &m, &r)?;
 
         let (h1, h2) = h(c)?;
         let ret = if c == c_prime.as_ref() {

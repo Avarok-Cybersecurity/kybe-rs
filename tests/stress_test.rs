@@ -1,28 +1,24 @@
-use kybe_rs::*;
+#[cfg(test)]
+mod tests {
+    use kybe_rs::*;
 
-const MAX_MESSAGE_LEN: usize = 33;
+    const MAX_LEN: usize = 100;
+    const KEM_TEST_COUNT: usize = 100;
 
-#[test]
-fn generate_tests() {
-    for x in 0..100 {
-        for len in 1..MAX_MESSAGE_LEN {
-            let pke512 = kyber512pke();
-            let kem512 = kyber512kem();
-            let (sk_kem_512, pk_kem_512) = kem512.keygen().unwrap();
-            let (ct_kem_512, ss_kem_512) = kem512.encaps(&pk_kem_512).unwrap();
-            let ss_kem_512_alice = kem512.decaps(&ct_kem_512, &sk_kem_512).unwrap();
-            assert_eq!(ss_kem_512_alice, ss_kem_512);
+    #[test]
+    fn test_pke_512() {
+        for x in 0..10 {
+            for len in 1..=MAX_LEN {
+                let pke512 = kyber512pke();
 
-            println!("~~~~~~~~~~~~ PKE ~~~~~~~~~~~~");
-            let (sk_pke_512, pk_pke_512) = pke512.keygen().unwrap();
-            let random_message = ByteArray::random(len);
-            let nonce = ByteArray::random(32);
-            let pke_ct = pke512
-                .encrypt(&pk_pke_512, &random_message, &nonce)
-                .unwrap();
-            let mut pke_decrypted_ct = pke512.decrypt(&sk_pke_512, &pke_ct).unwrap();
-            pke_decrypted_ct.data.truncate(len);
-            if len != 33 {
+                let (sk_pke_512, pk_pke_512) = pke512.keygen().unwrap();
+                let random_message = ByteArray::random(len);
+                let nonce = ByteArray::random(32);
+                let pke_ct = pke512
+                    .encrypt(&pk_pke_512, &random_message, &nonce)
+                    .unwrap();
+                let mut pke_decrypted_ct = pke512.decrypt(&sk_pke_512, &pke_ct).unwrap();
+                //pke_decrypted_ct.data.truncate(len);
                 assert_eq!(
                     random_message.as_ref(),
                     pke_decrypted_ct.as_ref(),
@@ -30,15 +26,40 @@ fn generate_tests() {
                     len,
                     x
                 );
-            } else {
-                assert_ne!(
-                    random_message.as_ref(),
-                    pke_decrypted_ct.as_ref(),
-                    "Failed at len {} rep {}",
-                    len,
-                    x
-                );
             }
+        }
+    }
+
+    #[test]
+    fn test_kem_512() {
+        for _ in 0..KEM_TEST_COUNT {
+            let kem = kyber512kem();
+            let (sk_kem, pk_kem) = kem.keygen().unwrap();
+            let (ct_kem, ss_kem) = kem.encaps(&pk_kem).unwrap();
+            let ss_kem_alice = kem.decaps(&ct_kem, &sk_kem).unwrap();
+            assert_eq!(ss_kem_alice, ss_kem);
+        }
+    }
+
+    #[test]
+    fn test_kem_768() {
+        for _ in 0..KEM_TEST_COUNT {
+            let kem = kyber768kem();
+            let (sk_kem, pk_kem) = kem.keygen().unwrap();
+            let (ct_kem, ss_kem) = kem.encaps(&pk_kem).unwrap();
+            let ss_kem_alice = kem.decaps(&ct_kem, &sk_kem).unwrap();
+            assert_eq!(ss_kem_alice, ss_kem);
+        }
+    }
+
+    #[test]
+    fn test_kem_1024() {
+        for _ in 0..KEM_TEST_COUNT {
+            let kem = kyber1024kem();
+            let (sk_kem, pk_kem) = kem.keygen().unwrap();
+            let (ct_kem, ss_kem) = kem.encaps(&pk_kem).unwrap();
+            let ss_kem_alice = kem.decaps(&ct_kem, &sk_kem).unwrap();
+            assert_eq!(ss_kem_alice, ss_kem);
         }
     }
 }

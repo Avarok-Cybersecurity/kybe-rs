@@ -40,11 +40,11 @@
 //! let (sk, pk) = pke.keygen().unwrap();
 //!
 //! // Bob uses the public key to encrypt the message
-//! let enc = pke.encrypt(&pk, &m, r.clone()).unwrap();
+//! let enc = pke.encrypt_block(&pk, &m, r.clone()).unwrap();
 //!
 //! // Bob sends enc to Alice
 //! // Alice uses the secret key to recover m
-//! let dec = pke.decrypt(&sk, &enc).unwrap();
+//! let dec = pke.decrypt_block(&sk, &enc).unwrap();
 //!
 //! assert_eq!(m, dec);
 //! ```
@@ -96,6 +96,7 @@ pub const fn kyber1024kem() -> KEM<256, 4> {
 
 #[derive(Debug)]
 pub enum Error {
+    Encrypt(String),
     Decrypt(String),
     Index(String),
 }

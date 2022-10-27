@@ -2,8 +2,8 @@
 //!
 //! Utils for compressing/decompressing integers, polynomials and polyvec
 
-use crate::structures::{Poly3329, PolyVec3329, F3329};
 use crate::structures::algebraics::FiniteField;
+use crate::structures::{Poly3329, PolyVec3329, F3329};
 
 /// Compress function on coefficients, p. 6
 fn compress_integer(x: usize, d: usize, q: usize) -> usize {

@@ -79,7 +79,8 @@ impl<T: AsRef<[u8]>> GetBit for T {
                 "Unable to get idx {} from array of len {}",
                 index,
                 self.as_ref().len()
-            ))})?;
+            ))
+        })?;
 
         let ret = (byte_value_at_index >> exp) & 1;
 

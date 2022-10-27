@@ -10,12 +10,14 @@ pub fn bench_kyber512_pke(c: &mut Criterion) {
     let mut group = c.benchmark_group("Kyber 512 PKE");
 
     let (sk, pk) = pke.keygen();
-    let enc = pke.encrypt(&pk, &m, r.clone());
-    let _dec = pke.decrypt(&sk, &enc);
+    let enc = pke.encrypt_block(&pk, &m, r.clone());
+    let _dec = pke.decrypt_block(&sk, &enc);
 
     group.bench_function("Keygen", |b| b.iter(|| pke.keygen()));
-    group.bench_function("Encryption", |b| b.iter(|| pke.encrypt(&pk, &m, r.clone())));
-    group.bench_function("Decryption", |b| b.iter(|| pke.decrypt(&sk, &enc)));
+    group.bench_function("Encryption", |b| {
+        b.iter(|| pke.encrypt_block(&pk, &m, r.clone()))
+    });
+    group.bench_function("Decryption", |b| b.iter(|| pke.decrypt_block(&sk, &enc)));
 
     group.finish();
 }
@@ -43,12 +45,14 @@ pub fn bench_kyber768_pke(c: &mut Criterion) {
     let mut group = c.benchmark_group("Kyber 768 PKE");
 
     let (sk, pk) = pke.keygen();
-    let enc = pke.encrypt(&pk, &m, r.clone());
-    let _dec = pke.decrypt(&sk, &enc);
+    let enc = pke.encrypt_block(&pk, &m, r.clone());
+    let _dec = pke.decrypt_block(&sk, &enc);
 
     group.bench_function("Keygen", |b| b.iter(|| pke.keygen()));
-    group.bench_function("Encryption", |b| b.iter(|| pke.encrypt(&pk, &m, r.clone())));
-    group.bench_function("Decryption", |b| b.iter(|| pke.decrypt(&sk, &enc)));
+    group.bench_function("Encryption", |b| {
+        b.iter(|| pke.encrypt_block(&pk, &m, r.clone()))
+    });
+    group.bench_function("Decryption", |b| b.iter(|| pke.decrypt_block(&sk, &enc)));
 
     group.finish();
 }
@@ -74,12 +78,14 @@ pub fn bench_kyber1024_pke(c: &mut Criterion) {
     let mut group = c.benchmark_group("Kyber 1024 PKE");
 
     let (sk, pk) = pke.keygen();
-    let enc = pke.encrypt(&pk, &m, r.clone());
-    let _dec = pke.decrypt(&sk, &enc);
+    let enc = pke.encrypt_block(&pk, &m, r.clone());
+    let _dec = pke.decrypt_block(&sk, &enc);
 
     group.bench_function("Keygen", |b| b.iter(|| pke.keygen()));
-    group.bench_function("Encryption", |b| b.iter(|| pke.encrypt(&pk, &m, r.clone())));
-    group.bench_function("Decryption", |b| b.iter(|| pke.decrypt(&sk, &enc)));
+    group.bench_function("Encryption", |b| {
+        b.iter(|| pke.encrypt_block(&pk, &m, r.clone()))
+    });
+    group.bench_function("Decryption", |b| b.iter(|| pke.decrypt_block(&sk, &enc)));
 
     group.finish();
 }
