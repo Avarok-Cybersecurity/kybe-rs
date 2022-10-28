@@ -14,8 +14,6 @@ The CRYSTALS-KYBER submission already comes with reference implementations, incl
 * Public-key encryption (`PKE`)
 * All the parameters described in the NIST submission: `kyber-512`, `kyber-768`, and `kyber-1024`.
 
-The 2nd round updated specification (30 march 2019) is used as a basis for implementation.
-
 #### Unsupported features and caveats
 
 * The implementation is not guaranteed to be constant time
