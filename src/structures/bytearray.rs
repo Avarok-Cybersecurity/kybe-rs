@@ -63,7 +63,7 @@ impl AsRef<[u8]> for ByteArray {
 }
 
 pub(crate) trait GetBit {
-    fn get_bit(&self, pos: usize) -> bool;
+    fn get_bit(&self, pos: usize) -> Result<bool, Error>;
 }
 
 pub(crate) trait SafeSplit {
@@ -71,10 +71,20 @@ pub(crate) trait SafeSplit {
 }
 
 impl<T: AsRef<[u8]>> GetBit for T {
-    fn get_bit(&self, pos: usize) -> bool {
-        let (index, offset) = (pos / 8, pos % 8);
-        let mask = 1 << offset;
-        !((self.as_ref()[index] & mask) == 0)
+    fn get_bit(&self, pos: usize) -> Result<bool, Error> {
+        let index = pos / 8;
+        let exp = pos % 8;
+        let byte_value_at_index = self.as_ref().get(index).cloned().ok_or_else(|| {
+            Error::Index(format!(
+                "Unable to get idx {} from array of len {}",
+                index,
+                self.as_ref().len()
+            ))
+        })?;
+
+        let ret = (byte_value_at_index >> exp) & 1;
+
+        Ok(ret == 1)
     }
 }
 

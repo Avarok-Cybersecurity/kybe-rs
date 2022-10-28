@@ -13,17 +13,25 @@ use crate::structures::bytearray::SafeSplit;
 
 /// Deserialize ByteArray into Polynomial
 /// Algorithm 3 p. 8
-pub fn decode_to_poly<const N: usize, T: AsRef<[u8]>>(bs: T, ell: usize) -> Poly3329<N> {
+pub fn decode_to_poly<const N: usize, T: AsRef<[u8]>>(
+    bs: T,
+    ell: usize,
+) -> Result<Poly3329<N>, Error> {
     let mut f = [F3329::zero(); N];
+
+    let mut degree = 0;
 
     for i in 0..N {
         for j in 0..ell {
-            if bs.get_bit(i * ell + j) {
+            let pos = (i * ell) + j;
+            if let Ok(true) = bs.get_bit(pos) {
                 f[i] = f[i].add(&F3329::from_int(1 << j));
+                degree += 1;
             }
         }
     }
-    Poly3329::from_vec(f)
+
+    Ok(Poly3329::from_vec(degree, f))
 }
 
 /// Serialize Poly into ByteArray
@@ -31,7 +39,7 @@ pub fn encode_poly<const N: usize>(p: Poly3329<N>, ell: usize) -> ByteArray {
     let mut b = vec![];
     let mut c: u8 = 0;
 
-    for i in 0..256 {
+    for i in 0..N {
         let mut v = p[i].to_int();
         for j in 0..ell {
             let s = (i * ell + j) % 8;
@@ -56,15 +64,15 @@ pub fn decode_to_polyvec<const N: usize, const D: usize, T: AsRef<[u8]>>(
     bs: T,
     ell: usize,
 ) -> Result<PolyVec3329<N, D>, Error> {
-    let mut bs = bs.as_ref();
+    let bs = bs.as_ref();
     let mut p_vec = PolyVec3329::from_vec([Poly3329::init(); D]);
 
     let mut init_split_pt = 0;
     for i in 0..D {
         let (_, c) = bs.safe_split_at(init_split_pt)?;
         let (a, _) = c.safe_split_at(32 * ell)?;
-        p_vec.set(i, decode_to_poly(a, ell));
-        init_split_pt += (32 * ell);
+        p_vec.set(i, decode_to_poly(a, ell)?);
+        init_split_pt += 32 * ell;
     }
 
     Ok(p_vec)
@@ -105,8 +113,12 @@ pub fn encode_polyvec<const N: usize, const D: usize>(
 
 #[test]
 fn encode_decode_poly() {
-    let original = Poly3329::from_vec([Default::default(); 256]);
-    let encoded = encode_poly(original.clone(), 12);
-    let decoded = decode_to_poly(encoded, 12);
-    assert!(decoded == original);
+    let coefficients = &mut [Default::default(); 256];
+    for x in 0..256 {
+        coefficients[x] = F3329::from_int(x);
+        let original = Poly3329::from_vec(0, *coefficients);
+        let encoded = encode_poly(original, 12);
+        let decoded = decode_to_poly(encoded, 12).unwrap();
+        assert!(decoded == original);
+    }
 }

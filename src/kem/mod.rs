@@ -9,9 +9,11 @@ use crate::Error;
 
 use crate::structures::bytearray::SafeSplit;
 
+#[derive(Clone, Copy)]
 pub struct KEM<const N: usize, const K: usize> {
     pke: PKE<N, K>,
     delta: usize,
+    ss_size: usize,
     pk_size: usize,
     sk_size: usize,
     ct_size: usize,
@@ -30,20 +32,32 @@ impl<const N: usize, const K: usize> KEM<N, K> {
         Ok((sk, pk))
     }
 
-    /// Encryption : public key  => ciphertext, Shared Key
-    /// Algorithm 8 p. 11
     pub fn encaps(&self, pk: &ByteArray) -> Result<(ByteArray, ByteArray), Error> {
         let m = ByteArray::random(32);
-        let (mut m1, m2) = h(&m)?;
-        let (h1, h2) = h(pk)?;
-        let (k_bar, r) = g(&ByteArray::concat(&[&m1, &m2, &h1, &h2]))?;
+        self.encaps_with_seed(pk, m)
+    }
 
+    /// Encryption : public key  => ciphertext, Shared Key
+    /// Algorithm 8 p. 11
+    pub fn encaps_with_seed(
+        &self,
+        pk: &ByteArray,
+        m: ByteArray,
+    ) -> Result<(ByteArray, ByteArray), Error> {
+        let (mut m1, m2) = h(&m)?;
         m1.append(&m2);
 
-        let c = self.pke.encrypt(pk, &m1, &r)?;
+        let (mut h1, h2) = h(pk)?;
+        h1.append(h2);
 
-        let (h1, h2) = h(&c)?;
-        let k = kdf(&ByteArray::concat(&[&k_bar, &h1, &h2]), self.sk_size);
+        let (k_bar, r) = g(&ByteArray::concat(&[&m1, &h1]))?;
+
+        let c = self.pke.encrypt_block(pk, &m1, &r)?;
+
+        let (mut h1, h2) = h(&c)?;
+        h1.append(h2);
+
+        let k = kdf(&ByteArray::concat(&[&k_bar, &h1]), self.sk_size);
 
         Ok((c, k))
     }
@@ -59,11 +73,13 @@ impl<const N: usize, const K: usize> KEM<N, K> {
         let (pk, rem) = rem.safe_split_at(12 * K * N / 8 + 32)?;
         let (hash, z) = rem.safe_split_at(32)?;
 
-        let mut m = self.pke.decrypt(&sk_prime, c)?;
+        let mut m = self.pke.decrypt_block(&sk_prime, c)?;
+        println!("m.len() = {}", m.data.len());
         m.append(&hash);
+        println!("m.len() = {}", m.data.len());
 
         let (k_bar, r) = g(&m)?;
-        let c_prime = self.pke.encrypt(&pk, &m, &r)?;
+        let c_prime = self.pke.encrypt_block(&pk, &m, &r)?;
 
         let (h1, h2) = h(c)?;
         let ret = if c == c_prime.as_ref() {
@@ -78,19 +94,15 @@ impl<const N: usize, const K: usize> KEM<N, K> {
         Ok(ret)
     }
 
-    pub const fn init(
-        pke: PKE<N, K>,
-        delta: usize,
-        pk_size: usize,
-        sk_size: usize,
-        ct_size: usize,
-    ) -> Self {
+    pub const fn init(pke: PKE<N, K>, delta: usize, ss_size: usize, d: (usize, usize)) -> Self {
+        let (du, dv) = d;
         Self {
             pke,
             delta,
-            pk_size,
-            sk_size,
-            ct_size,
+            ss_size,
+            pk_size: 12 * K * N / 8 + 32,
+            sk_size: 12 * K * N / 8,
+            ct_size: (du * K + dv) * N / 8,
         }
     }
 }
@@ -108,6 +120,12 @@ fn kem_keygen_ccakem_768() {
 }
 
 #[test]
+fn kem_keygen_ccakem_1024() {
+    let kem = crate::kyber1024kem();
+    kem.keygen().unwrap();
+}
+
+#[test]
 fn encapsulate_then_decapsulate_ccakem_512() {
     let kem = crate::kyber512kem();
 
@@ -121,6 +139,17 @@ fn encapsulate_then_decapsulate_ccakem_512() {
 #[test]
 fn encapsulate_then_decapsulate_ccakem_768() {
     let kem = crate::kyber768kem();
+
+    let (sk, pk) = kem.keygen().unwrap();
+    let (ctx, shk) = kem.encaps(&pk).unwrap();
+    let shk2 = kem.decaps(&ctx, &sk).unwrap();
+
+    assert_eq!(shk, shk2);
+}
+
+#[test]
+fn encapsulate_then_decapsulate_ccakem_1024() {
+    let kem = crate::kyber1024kem();
 
     let (sk, pk) = kem.keygen().unwrap();
     let (ctx, shk) = kem.encaps(&pk).unwrap();

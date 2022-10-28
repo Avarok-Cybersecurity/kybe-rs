@@ -76,7 +76,7 @@ pub fn bcm_matrix_vec<const N: usize, const X: usize, const Y: usize>(
     let mut v = PolyVec3329::init();
 
     for i in 0..Y {
-        v.set(i, bcm_vec(&a.row(i), &b))
+        v.set(i, bcm_vec(&a.row(i), b))
     }
 
     v
@@ -106,8 +106,8 @@ pub fn ntt_product_matvec<const N: usize, const X: usize, const Y: usize>(
 /// Number theoretic Transform on vectors
 pub fn ntt_vec<const N: usize, const D: usize>(p: &PolyVec3329<N, D>) -> PolyVec3329<N, D> {
     let mut coeffs = [Default::default(); D];
-    for i in 0..D {
-        coeffs[i] = base_ntt(&p.coefficients[i]);
+    for (i, el) in coeffs.iter_mut().enumerate() {
+        *el = base_ntt(&p.coefficients[i]);
     }
     PolyVec3329::from_vec(coeffs)
 }
@@ -115,8 +115,8 @@ pub fn ntt_vec<const N: usize, const D: usize>(p: &PolyVec3329<N, D>) -> PolyVec
 /// Reverse NTT on vectors
 fn rev_ntt_vec<const N: usize, const D: usize>(p_hat: &PolyVec3329<N, D>) -> PolyVec3329<N, D> {
     let mut coeffs = [Default::default(); D];
-    for i in 0..D {
-        coeffs[i] = rev_ntt(&p_hat.coefficients[i]);
+    for (i, el) in coeffs.iter_mut().enumerate() {
+        *el = rev_ntt(&p_hat.coefficients[i]);
     }
     PolyVec3329::from_vec(coeffs)
 }
@@ -195,7 +195,7 @@ fn rev_ntt<const N: usize>(p_hat: &Poly3329<N>) -> Poly3329<N> {
 
 #[test]
 fn rev_then_ntt() {
-    let mut u_bold = Poly3329::from_vec([Default::default(); 256]);
+    let mut u_bold = Poly3329::from_vec(256 - 1, [Default::default(); 256]);
     for i in 0..256 {
         u_bold.set_coeff(i, F3329::from_int(i));
     }
@@ -206,7 +206,7 @@ fn rev_then_ntt() {
 
 #[test]
 fn ntt_then_rev() {
-    let mut u = Poly3329::from_vec([Default::default(); 256]);
+    let mut u = Poly3329::from_vec(256 - 1, [Default::default(); 256]);
     for i in 0..256 {
         u.set_coeff(i, F3329::from_int(i));
     }
