@@ -23,11 +23,11 @@ pub fn parse<const N: usize>(bs: &ByteArray, q: usize) -> Poly3329<N> {
         let d_1 = (bs.data[i] as usize) + (((bs.data[i + 1] & mask) as usize) << 8);
         let d_2 = ((bs.data[i + 1] >> 4) as usize) + ((bs.data[i + 2] as usize) << 4);
         if d_1 < q {
-            p.set_coeff(j, F3329::from_int(d_1));
+            p.set_coeff(j, F3329::from(d_1));
             j += 1;
         }
         if d_2 < q && j < N {
-            p.set_coeff(j, F3329::from_int(d_2));
+            p.set_coeff(j, F3329::from(d_2));
             j += 1;
         }
         i += 3;
@@ -53,7 +53,7 @@ pub fn cbd<const N: usize>(bs: ByteArray, eta: usize) -> Result<Poly3329<N>, Err
                 b += 1;
             }
         }
-        let (a_hat, b_hat) = (F3329::from_int(a), F3329::from_int(b));
+        let (a_hat, b_hat) = (F3329::from(a), F3329::from(b));
         p.set_coeff(i, a_hat - b_hat);
     }
 

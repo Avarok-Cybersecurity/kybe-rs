@@ -213,12 +213,12 @@ const INV_3329: [usize; 3329] = [
     3272, 1664, 3328,
 ];
 
-#[derive(Clone, Copy, Eq, PartialEq, Debug)]
-pub struct PrimeField3329 {
+#[derive(Clone, Copy, Eq, PartialEq, Debug, Default)]
+pub struct PrimeField<const Q: usize> {
     val: u16,
 }
 
-impl FiniteField for PrimeField3329 {
+impl<const Q: usize> FiniteField for PrimeField<Q> {
     fn is_zero(&self) -> bool {
         self.val == 0
     }
@@ -231,7 +231,7 @@ impl FiniteField for PrimeField3329 {
     }
 
     fn one() -> Self {
-        Self { val: 1 }
+        Self { val: (1 % Q) as u16 }
     }
 
     fn dimension() -> usize {
@@ -243,49 +243,43 @@ impl FiniteField for PrimeField3329 {
             return Err("Division by zero".to_string());
         }
 
-        Ok(Self::from_int(INV_3329[self.val as usize]))
+        Ok(Self::from(INV_3329[self.val as usize]))
     }
 }
 
-impl Default for PrimeField3329 {
-    fn default() -> Self {
-        Self { val: 0 }
-    }
-}
-
-impl Add for PrimeField3329 {
+impl<const Q: usize> Add for PrimeField<Q> {
     type Output = Self;
 
     fn add(self, other: Self) -> Self::Output {
         Self {
-            val: (self.val + other.val) % Self::order(),
+            val: ((self.val as usize + other.val as usize) % Q) as u16,
         }
     }
 }
 
-impl Sub for PrimeField3329 {
+impl<const Q: usize> Sub for PrimeField<Q> {
     type Output = Self;
 
     fn sub(self, other: Self) -> Self::Output {
-        let o = Self::order();
+        let o = Q;
 
         Self {
-            val: (self.val + (o - other.val)) % o,
+            val: ((self.val as usize + (o - other.val as usize)) % o) as u16,
         }
     }
 }
 
-impl Mul for PrimeField3329 {
+impl<const Q: usize> Mul for PrimeField<Q> {
     type Output = Self;
 
     fn mul(self, other: Self) -> Self {
         Self {
-            val: (self.val * other.val) % Self::order(),
+            val: ((self.val as usize * other.val as usize) % Q) as u16,
         }
     }
 }
 
-impl Div for PrimeField3329 {
+impl<const Q: usize> Div for PrimeField<Q> {
     type Output = Self;
 
     fn div(self, other: Self) -> Self {
@@ -293,42 +287,38 @@ impl Div for PrimeField3329 {
     }
 }
 
-impl AddAssign for PrimeField3329 {
+impl<const Q: usize> AddAssign for PrimeField<Q> {
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
     }
 }
 
-impl SubAssign for PrimeField3329 {
+impl<const Q: usize> SubAssign for PrimeField<Q> {
     fn sub_assign(&mut self, rhs: Self) {
         *self = *self - rhs;
     }
 }
 
-impl MulAssign for PrimeField3329 {
+impl<const Q: usize> MulAssign for PrimeField<Q> {
     fn mul_assign(&mut self, rhs: Self) {
         *self = *self * rhs;
     }
 }
 
-impl DivAssign for PrimeField3329 {
+impl<const Q: usize> DivAssign for PrimeField<Q> {
     fn div_assign(&mut self, rhs: Self) {
         *self = *self / rhs;
     }
 }
 
-impl PrimeField3329 {
-    #[inline]
-    pub const fn order() -> u16 {
-        3329
-    }
-
-    pub fn from_int<T: Into<usize>>(x: T) -> Self {
-        let o = Self::order() as usize;
-        Self { val: ((x.into() + o) % o) as u16 }
-    }
-
+impl<const Q: usize> PrimeField<Q> {
     pub const fn as_int(self) -> u16 {
         self.val
+    }
+}
+
+impl<const Q: usize, T: Into<usize>> From<T> for PrimeField<Q> {
+    fn from(x: T) -> Self {
+        Self { val: ((x.into() + Q) % Q) as u16 }
     }
 }

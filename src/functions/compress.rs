@@ -25,7 +25,7 @@ fn decompress_integer(x: u16, d: u16, q: u16) -> u16 {
 pub fn compress_poly<const N: usize>(x: Poly3329<N>, d: u16, q: u16) -> Poly3329<N> {
     let mut coeffs = [Default::default(); N];
     for (i, el) in coeffs.iter_mut().enumerate() {
-        *el = F3329::from_int(compress_integer(x[i].as_int(), d, q));
+        *el = F3329::from(compress_integer(x[i].as_int(), d, q));
     }
     Poly3329::from_vec(coeffs.len() - 1, coeffs)
 }
@@ -34,7 +34,7 @@ pub fn compress_poly<const N: usize>(x: Poly3329<N>, d: u16, q: u16) -> Poly3329
 pub fn decompress_poly<const N: usize>(x: Poly3329<N>, d: u16, q: u16) -> Poly3329<N> {
     let mut coeffs = [Default::default(); N];
     for (i, el) in coeffs.iter_mut().enumerate() {
-        *el = F3329::from_int(decompress_integer(x[i].as_int(), d, q));
+        *el = F3329::from(decompress_integer(x[i].as_int(), d, q));
     }
     Poly3329::from_vec(coeffs.len() - 1, coeffs)
 }
@@ -49,7 +49,7 @@ pub fn compress_polyvec<const N: usize, const D: usize>(
     for (i, el) in coeffs.iter_mut().enumerate() {
         *el = compress_poly(x.coefficients[i], d, q);
     }
-    PolyVec3329::from_vec(coeffs)
+    PolyVec3329::from(coeffs)
 }
 
 /// Decompress function on R_q^k
@@ -62,7 +62,7 @@ pub fn decompress_polyvec<const N: usize, const D: usize>(
     for (i, el) in coeffs.iter_mut().enumerate() {
         *el = decompress_poly(x.coefficients[i], d, q);
     }
-    PolyVec3329::from_vec(coeffs)
+    PolyVec3329::from(coeffs)
 }
 
 #[test]

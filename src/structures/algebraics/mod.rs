@@ -30,7 +30,7 @@ pub trait FiniteGroup: Sized + Eq {
 }
 
 /// Finite Ring element
-pub trait FiniteRing: Sized + Eq {
+pub trait FiniteRing: Sized + Eq + Copy + Clone + Default {
     /// Check if the element is the additive identity
     fn is_zero(&self) -> bool;
 
@@ -43,7 +43,7 @@ pub trait FiniteRing: Sized + Eq {
     /// Defines the addition of two elements
     fn add(&self, other: &Self) -> Self;
 
-    /// Defines the substraction of two elements
+    /// Defines the subtraction of two elements
     fn sub(&self, other: &Self) -> Self;
 
     /// Returns the multiplicative identity

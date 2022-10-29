@@ -42,7 +42,7 @@ fn bcm<const N: usize>(a: &Poly3329<N>, b: &Poly3329<N>) -> Poly3329<N> {
     let mut p = Poly3329::init();
 
     for i in 0..=(N - 1) / 2 {
-        let zeta = F3329::from_int(ZETAS_256[2 * byte_rev(i) + 1]);
+        let zeta = F3329::from(ZETAS_256[2 * byte_rev(i) + 1]);
 
         let p01 = a[2 * i] * b[2 * i];
         let p02 = a[2 * i + 1] * b[2 * i + 1] * zeta;
@@ -109,7 +109,7 @@ pub fn ntt_vec<const N: usize, const D: usize>(p: &PolyVec3329<N, D>) -> PolyVec
     for (i, el) in coeffs.iter_mut().enumerate() {
         *el = base_ntt(&p.coefficients[i]);
     }
-    PolyVec3329::from_vec(coeffs)
+    PolyVec3329::from(coeffs)
 }
 
 /// Reverse NTT on vectors
@@ -118,7 +118,7 @@ fn rev_ntt_vec<const N: usize, const D: usize>(p_hat: &PolyVec3329<N, D>) -> Pol
     for (i, el) in coeffs.iter_mut().enumerate() {
         *el = rev_ntt(&p_hat.coefficients[i]);
     }
-    PolyVec3329::from_vec(coeffs)
+    PolyVec3329::from(coeffs)
 }
 
 /// Number theoretic Transform
@@ -137,7 +137,7 @@ fn base_ntt<const N: usize>(p: &Poly3329<N>) -> Poly3329<N> {
 
         for j in 1..=(N - 1) / 2 {
             let index = (2 * byte_rev(i) * j + j) % 256;
-            let zeta = F3329::from_int(ZETAS_256[index]);
+            let zeta = F3329::from(ZETAS_256[index]);
             let mut c0 = p[2 * j];
             let mut c1 = p[2 * j + 1];
 
@@ -165,16 +165,16 @@ fn rev_ntt<const N: usize>(p_hat: &Poly3329<N>) -> Poly3329<N> {
     // Unwraps safely since the case None has been tested above
     let d = p_hat.degree().unwrap();
 
-    let coeff = F3329::from_int((d / 2) + 1);
+    let coeff = F3329::from((d / 2) + 1);
 
     for i in 0..=(N - 1) / 2 {
         let mut p0 = p_hat[0];
         let mut p1 = p_hat[1];
-        let z = F3329::from_int(ZETAS_256[((256 - i) % 256)]);
+        let z = F3329::from(ZETAS_256[((256 - i) % 256)]);
 
         for j in 1..=(N - 1) / 2 {
             let index = (2 * byte_rev(i) * j) % 256;
-            let zeta = F3329::from_int(ZETAS_256[(256 - index) % 256]);
+            let zeta = F3329::from(ZETAS_256[(256 - index) % 256]);
             let mut c0 = p_hat[2 * j];
             let mut c1 = p_hat[2 * j + 1];
 
@@ -197,7 +197,7 @@ fn rev_ntt<const N: usize>(p_hat: &Poly3329<N>) -> Poly3329<N> {
 fn rev_then_ntt() {
     let mut u_bold = Poly3329::from_vec(256 - 1, [Default::default(); 256]);
     for i in 0..256 {
-        u_bold.set_coeff(i, F3329::from_int(i));
+        u_bold.set_coeff(i, F3329::from(i));
     }
     let u = rev_ntt(&u_bold);
 
@@ -208,7 +208,7 @@ fn rev_then_ntt() {
 fn ntt_then_rev() {
     let mut u = Poly3329::from_vec(256 - 1, [Default::default(); 256]);
     for i in 0..256 {
-        u.set_coeff(i, F3329::from_int(i));
+        u.set_coeff(i, F3329::from(i));
     }
     let u_bold = base_ntt(&u);
 

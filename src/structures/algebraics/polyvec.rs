@@ -13,18 +13,55 @@ pub struct PolyVec<T: FiniteRing, const D: usize> {
 
 impl<T, const D: usize> RingModule<T> for PolyVec<T, D>
 where
-    T: FiniteRing + Clone + Default + Copy,
+    T: FiniteRing,
 {
-    fn get(&self, position: usize) -> T {
-        self.coefficients[position]
-    }
-
-    fn set(&mut self, position: usize, value: T) {
-        self.coefficients[position] = value;
+    fn is_zero(&self) -> bool {
+        D == 0 || self.coefficients.iter().all(|c| c.is_zero())
     }
 
     fn zero() -> Self {
         Self::init()
+    }
+
+    fn neg(&self) -> Self {
+        Self::init().sub(self)
+    }
+
+    fn add(&self, other: &Self) -> Self {
+        let mut v = [Default::default(); D];
+
+        for (i, el) in v.iter_mut().enumerate() {
+            *el = self.coefficients[i].add(&other.coefficients[i]);
+        }
+        Self::from(v)
+    }
+
+    fn sub(&self, other: &Self) -> Self {
+        let mut v = [Default::default(); D];
+
+        for (i, el) in v.iter_mut().enumerate() {
+            *el = self.coefficients[i].sub(&other.coefficients[i])
+        }
+        Self::from(v)
+    }
+
+    fn dimension() -> usize {
+        D
+    }
+
+    fn init() -> Self {
+        Self {
+            coefficients: [T::zero(); D],
+        }
+    }
+
+    fn mulf(&self, other: &T) -> Self {
+        let mut v = [Default::default(); D];
+
+        for (i, el) in v.iter_mut().enumerate() {
+            *el = self.coefficients[i].mul(other)
+        }
+        Self::from(v)
     }
 
     fn basis_vector(position: usize) -> Self {
@@ -34,40 +71,12 @@ where
         v
     }
 
-    fn init() -> Self {
-        Self {
-            coefficients: [T::zero(); D],
-        }
+    fn set(&mut self, position: usize, value: T) {
+        self.coefficients[position] = value;
     }
 
-    fn is_zero(&self) -> bool {
-        D == 0 || self.coefficients.iter().all(|c| c.is_zero())
-    }
-
-    fn neg(&self) -> Self {
-        Self::init().sub(self)
-    }
-
-    fn dimension() -> usize {
-        D
-    }
-
-    fn add(&self, other: &Self) -> Self {
-        let mut v = [Default::default(); D];
-
-        for (i, el) in v.iter_mut().enumerate() {
-            *el = self.coefficients[i].add(&other.coefficients[i]);
-        }
-        Self::from_vec(v)
-    }
-
-    fn sub(&self, other: &Self) -> Self {
-        let mut v = [Default::default(); D];
-
-        for (i, el) in v.iter_mut().enumerate() {
-            *el = self.coefficients[i].sub(&other.coefficients[i])
-        }
-        Self::from_vec(v)
+    fn get(&self, position: usize) -> T {
+        self.coefficients[position]
     }
 
     fn dot(&self, other: &Self) -> T {
@@ -78,33 +87,22 @@ where
         }
         v
     }
-
-    fn mulf(&self, other: &T) -> Self {
-        let mut v = [Default::default(); D];
-
-        for (i, el) in v.iter_mut().enumerate() {
-            *el = self.coefficients[i].mul(other)
-        }
-        Self::from_vec(v)
-    }
 }
 
 impl<T, const D: usize> Default for PolyVec<T, D>
 where
-    T: FiniteRing + Copy,
+    T: FiniteRing,
 {
     fn default() -> Self {
-        Self {
-            coefficients: [T::zero(); D],
-        }
+        Self::from([T::zero(); D])
     }
 }
 
-impl<T, const D: usize> PolyVec<T, D>
+impl<T, const D: usize> From<[T; D]> for PolyVec<T, D>
 where
-    T: FiniteRing + Clone + Default,
+    T: FiniteRing,
 {
-    pub fn from_vec(coefficients: [T; D]) -> Self {
+    fn from(coefficients: [T; D]) -> Self {
         Self { coefficients }
     }
 }

@@ -10,7 +10,7 @@ use std::ops::Index;
 #[derive(Clone, Copy)]
 pub struct Polynomial<T, const N: usize>
 where
-    T: FiniteField + Default,
+    T: FiniteField,
 {
     /// Coefficients of the polynomial
     pub coefficients: [T; N],
@@ -103,11 +103,9 @@ where
                 let c = self[i] * other[j];
                 let k = i + j;
                 if k < N {
-                    //coeffs[k].add(&c);
                     coeffs[k] += c
                 } else {
                     // X^n = -1
-                    //coeffs[k % N].sub(&c);
                     coeffs[k % N] -= c
                 }
             }
