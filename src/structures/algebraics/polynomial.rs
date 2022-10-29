@@ -10,7 +10,7 @@ use std::ops::Index;
 #[derive(Clone, Copy)]
 pub struct Polynomial<T, const N: usize>
 where
-    T: FiniteField + Default,
+    T: FiniteField,
 {
     /// Coefficients of the polynomial
     pub coefficients: [T; N],
@@ -32,12 +32,6 @@ where
             coefficients: [T::zero(); N],
             degree: None,
         }
-    }
-
-    fn one() -> Self {
-        let mut p = Self::zero();
-        p.set_coeff(0, T::one());
-        p
     }
 
     fn neg(&self) -> Self {
@@ -66,7 +60,7 @@ where
 
         let mut coefficients = [T::zero(); N];
         for (i, el) in coefficients.iter_mut().enumerate() {
-            *el = self[i].add(&other[i]);
+            *el = self[i] + other[i];
         }
 
         // Diminish degree if leading coefficient is zero
@@ -91,22 +85,28 @@ where
         self.add(&other.neg())
     }
 
+    fn one() -> Self {
+        let mut p = Self::zero();
+        p.set_coeff(0, T::one());
+        p
+    }
+
     fn mul(&self, other: &Self) -> Self {
         if self.is_zero() || other.is_zero() {
             return Self::zero();
         }
 
-        let coeffs = [T::zero(); N];
+        let mut coeffs = [T::zero(); N];
 
         for i in 0..N {
             for j in 0..N {
-                let c = self[i].mul(&other[j]);
+                let c = self[i] * other[j];
                 let k = i + j;
                 if k < N {
-                    coeffs[k].add(&c);
+                    coeffs[k] += c
                 } else {
                     // X^n = -1
-                    coeffs[k % N].sub(&c);
+                    coeffs[k % N] -= c
                 }
             }
         }
@@ -189,7 +189,7 @@ where
     }
 
     /// Multiplication by a scalar
-    pub fn mulf(&self, other: &T) -> Self {
+    pub fn mulf(&self, other: T) -> Self {
         // If the polynomial or the scalar is already zero, do nothing
         if self.is_zero() || other.is_zero() {
             return Self::zero();
@@ -200,7 +200,7 @@ where
         let mut v = [Default::default(); N];
 
         for (i, el) in v.iter_mut().enumerate().take(degree) {
-            *el = self.coefficients[i].mul(other)
+            *el = self.coefficients[i] * other
         }
         Self::from_vec(N - 1, v)
     }

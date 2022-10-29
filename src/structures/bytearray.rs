@@ -12,10 +12,6 @@ pub struct ByteArray {
     pub data: Vec<u8>,
 }
 
-pub struct ByteArrayRef<'a> {
-    pub data: &'a [u8],
-}
-
 impl ByteArray {
     /// Generate an empty ByteArray
     pub const fn new() -> Self {

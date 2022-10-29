@@ -36,7 +36,7 @@ where
 
     /// Return a specific row
     pub fn row(&self, index: usize) -> PolyVec<K, X> {
-        PolyVec::<K, X>::from_vec(self.coefficients[index])
+        PolyVec::<K, X>::from(self.coefficients[index])
     }
 
     /// Return a specific column

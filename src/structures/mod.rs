@@ -10,12 +10,12 @@ pub mod algebraics;
 use algebraics::Matrix;
 use algebraics::PolyVec;
 use algebraics::Polynomial;
-use primefield::PrimeField3329;
+use primefield::PrimeField;
 
 pub use bytearray::ByteArray;
 
 /// Finitefield Z_q
-pub type F3329 = PrimeField3329;
+pub type F3329 = PrimeField<3329>;
 
 /// Polynomial Ring R_q = Z_q[X]/(X^n+1)
 pub type Poly3329<const N: usize> = Polynomial<F3329, N>;

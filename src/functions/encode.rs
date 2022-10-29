@@ -25,7 +25,7 @@ pub fn decode_to_poly<const N: usize, T: AsRef<[u8]>>(
         for j in 0..ell {
             let pos = (i * ell) + j;
             if let Ok(true) = bs.get_bit(pos) {
-                f[i] = f[i].add(&F3329::from_int(1 << j));
+                f[i] += F3329::from(1usize << j);
                 degree += 1;
             }
         }
@@ -40,7 +40,7 @@ pub fn encode_poly<const N: usize>(p: Poly3329<N>, ell: usize) -> ByteArray {
     let mut c: u8 = 0;
 
     for i in 0..N {
-        let mut v = p[i].to_int();
+        let mut v = p[i].as_int();
         for j in 0..ell {
             let s = (i * ell + j) % 8;
             if s == 0 && !(i == 0 && j == 0) {
@@ -65,7 +65,7 @@ pub fn decode_to_polyvec<const N: usize, const D: usize, T: AsRef<[u8]>>(
     ell: usize,
 ) -> Result<PolyVec3329<N, D>, Error> {
     let bs = bs.as_ref();
-    let mut p_vec = PolyVec3329::from_vec([Poly3329::init(); D]);
+    let mut p_vec = PolyVec3329::from([Poly3329::init(); D]);
 
     let mut init_split_pt = 0;
     for i in 0..D {
@@ -115,7 +115,7 @@ pub fn encode_polyvec<const N: usize, const D: usize>(
 fn encode_decode_poly() {
     let coefficients = &mut [Default::default(); 256];
     for x in 0..256 {
-        coefficients[x] = F3329::from_int(x);
+        coefficients[x] = F3329::from(x);
         let original = Poly3329::from_vec(0, *coefficients);
         let encoded = encode_poly(original, 12);
         let decoded = decode_to_poly(encoded, 12).unwrap();
