@@ -140,10 +140,10 @@ impl<const N: usize, const K: usize> PKE<N, K> {
 
         let v = ntt_product_vec(&t_hat, &r_hat)
             .add(&e2)
-            .add(&decompress_poly(x, 1, self.q));
+            .add(&decompress_poly(x, 1, self.q as _));
 
-        let mut c1 = encode_polyvec(compress_polyvec(u_bold, du, self.q), du);
-        let c2 = encode_poly(compress_poly(v, dv, self.q), dv);
+        let mut c1 = encode_polyvec(compress_polyvec(u_bold, du as _, self.q as _), du);
+        let c2 = encode_poly(compress_poly(v, dv as _, self.q as _), dv);
 
         c1.append(&c2);
 
@@ -201,13 +201,13 @@ impl<const N: usize, const K: usize> PKE<N, K> {
         let offset = du * K * N / 8;
         let (c1, c2) = c.safe_split_at(offset)?;
 
-        let u = decompress_polyvec(decode_to_polyvec::<N, K, _>(c1, du)?, du, self.q);
-        let v = decompress_poly(decode_to_poly(c2, dv)?, dv, self.q);
+        let u = decompress_polyvec(decode_to_polyvec::<N, K, _>(c1, du)?, du as _, self.q as _);
+        let v = decompress_poly(decode_to_poly(c2, dv)?, dv as _, self.q as _);
         let s = decode_to_polyvec(sk.clone(), 12)?;
 
         let m = v.sub(&ntt_product_vec(&s, &ntt_vec(&u)));
 
-        let ret = encode_poly(compress_poly(m, 1, self.q), 1);
+        let ret = encode_poly(compress_poly(m, 1, self.q as _), 1);
         Ok(ret)
     }
 

@@ -1,6 +1,7 @@
 use crate::structures::algebraics::FiniteField;
 
 use std::fmt::Debug;
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
 /// Inversion table on the Finite Field F_3329
 /// INV_3329[i] = i^-1 mod 3329
@@ -212,77 +213,39 @@ const INV_3329: [usize; 3329] = [
     3272, 1664, 3328,
 ];
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
 pub struct PrimeField3329 {
-    val: usize,
-}
-
-impl Debug for PrimeField3329 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.val)
-    }
+    val: u16,
 }
 
 impl FiniteField for PrimeField3329 {
-    fn dimension() -> usize {
-        1
-    }
     fn is_zero(&self) -> bool {
         self.val == 0
     }
-
     fn zero() -> Self {
         Self { val: 0 }
+    }
+
+    fn neg(&self) -> Self {
+        Self::zero() - *self
     }
 
     fn one() -> Self {
         Self { val: 1 }
     }
 
-    fn neg(&self) -> Self {
-        Self::zero().sub(self)
-    }
-
-    fn add(&self, other: &Self) -> Self {
-        Self {
-            val: (self.val + other.val) % Self::order(),
-        }
-    }
-
-    fn sub(&self, other: &Self) -> Self {
-        let o = Self::order();
-
-        Self {
-            val: (self.val + (o - other.val)) % o,
-        }
-    }
-
-    fn mul(&self, other: &Self) -> Self {
-        Self {
-            val: (self.val * other.val) % Self::order(),
-        }
+    fn dimension() -> usize {
+        1
     }
 
     fn inv(&self) -> Result<Self, String> {
         if self.is_zero() {
-            return Err("DIV0".to_string());
+            return Err("Division by zero".to_string());
         }
 
-        Ok(Self::from_int(INV_3329[self.val]))
-    }
-
-    fn div(&self, other: &Self) -> Result<Self, String> {
-        Ok(self.mul(&other.inv()?))
+        Ok(Self::from_int(INV_3329[self.val as usize]))
     }
 }
-
-impl PartialEq for PrimeField3329 {
-    fn eq(&self, other: &Self) -> bool {
-        self.val == other.val
-    }
-}
-
-impl Eq for PrimeField3329 {}
 
 impl Default for PrimeField3329 {
     fn default() -> Self {
@@ -290,18 +253,82 @@ impl Default for PrimeField3329 {
     }
 }
 
+impl Add for PrimeField3329 {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self::Output {
+        Self {
+            val: (self.val + other.val) % Self::order(),
+        }
+    }
+}
+
+impl Sub for PrimeField3329 {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self::Output {
+        let o = Self::order();
+
+        Self {
+            val: (self.val + (o - other.val)) % o,
+        }
+    }
+}
+
+impl Mul for PrimeField3329 {
+    type Output = Self;
+
+    fn mul(self, other: Self) -> Self {
+        Self {
+            val: (self.val * other.val) % Self::order(),
+        }
+    }
+}
+
+impl Div for PrimeField3329 {
+    type Output = Self;
+
+    fn div(self, other: Self) -> Self {
+        self.mul(other.inv().unwrap())
+    }
+}
+
+impl AddAssign for PrimeField3329 {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
+
+impl SubAssign for PrimeField3329 {
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = *self - rhs;
+    }
+}
+
+impl MulAssign for PrimeField3329 {
+    fn mul_assign(&mut self, rhs: Self) {
+        *self = *self * rhs;
+    }
+}
+
+impl DivAssign for PrimeField3329 {
+    fn div_assign(&mut self, rhs: Self) {
+        *self = *self / rhs;
+    }
+}
+
 impl PrimeField3329 {
     #[inline]
-    pub const fn order() -> usize {
+    pub const fn order() -> u16 {
         3329
     }
 
-    pub const fn from_int(x: usize) -> Self {
-        let o = Self::order();
-        Self { val: (x + o) % o }
+    pub fn from_int<T: Into<usize>>(x: T) -> Self {
+        let o = Self::order() as usize;
+        Self { val: ((x.into() + o) % o) as u16 }
     }
 
-    pub const fn to_int(self) -> usize {
+    pub const fn as_int(self) -> u16 {
         self.val
     }
 }

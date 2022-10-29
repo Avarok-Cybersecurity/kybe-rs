@@ -25,7 +25,7 @@ pub fn decode_to_poly<const N: usize, T: AsRef<[u8]>>(
         for j in 0..ell {
             let pos = (i * ell) + j;
             if let Ok(true) = bs.get_bit(pos) {
-                f[i] = f[i].add(&F3329::from_int(1 << j));
+                f[i] += F3329::from_int(1usize << j);
                 degree += 1;
             }
         }
@@ -40,7 +40,7 @@ pub fn encode_poly<const N: usize>(p: Poly3329<N>, ell: usize) -> ByteArray {
     let mut c: u8 = 0;
 
     for i in 0..N {
-        let mut v = p[i].to_int();
+        let mut v = p[i].as_int();
         for j in 0..ell {
             let s = (i * ell + j) % 8;
             if s == 0 && !(i == 0 && j == 0) {

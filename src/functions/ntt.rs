@@ -3,7 +3,7 @@
 //! NTT operations and operations performed in the NTT domain
 
 use crate::structures::{
-    algebraics::{FiniteField, FiniteRing, RingModule},
+    algebraics::{FiniteRing, RingModule},
     Poly3329, PolyMatrix3329, PolyVec3329, F3329,
 };
 
@@ -44,14 +44,14 @@ fn bcm<const N: usize>(a: &Poly3329<N>, b: &Poly3329<N>) -> Poly3329<N> {
     for i in 0..=(N - 1) / 2 {
         let zeta = F3329::from_int(ZETAS_256[2 * byte_rev(i) + 1]);
 
-        let p01 = a[2 * i].mul(&b[2 * i]);
-        let p02 = a[2 * i + 1].mul(&b[2 * i + 1]).mul(&zeta);
+        let p01 = a[2 * i] * b[2 * i];
+        let p02 = a[2 * i + 1] * b[2 * i + 1] * zeta;
 
-        let p11 = a[2 * i].mul(&b[2 * i + 1]);
-        let p12 = a[2 * i + 1].mul(&b[2 * i]);
+        let p11 = a[2 * i] * b[2 * i + 1];
+        let p12 = a[2 * i + 1] * b[2 * i];
 
-        p.set_coeff(2 * i, p01.add(&p02));
-        p.set_coeff(2 * i + 1, p11.add(&p12));
+        p.set_coeff(2 * i, p01 + p02);
+        p.set_coeff(2 * i + 1, p11 + p12);
     }
     p
 }
@@ -141,11 +141,11 @@ fn base_ntt<const N: usize>(p: &Poly3329<N>) -> Poly3329<N> {
             let mut c0 = p[2 * j];
             let mut c1 = p[2 * j + 1];
 
-            c0 = c0.mul(&zeta);
-            c1 = c1.mul(&zeta);
+            c0 = c0 * zeta;
+            c1 = c1 * zeta;
 
-            p0 = p0.add(&c0);
-            p1 = p1.add(&c1);
+            p0 = p0 + c0;
+            p1 = p1 + c1;
         }
         a.set_coeff(2 * i, p0);
         a.set_coeff(2 * i + 1, p1);
@@ -178,16 +178,16 @@ fn rev_ntt<const N: usize>(p_hat: &Poly3329<N>) -> Poly3329<N> {
             let mut c0 = p_hat[2 * j];
             let mut c1 = p_hat[2 * j + 1];
 
-            c0 = c0.mul(&zeta);
-            c1 = c1.mul(&zeta);
+            c0 *= zeta;
+            c1 *= zeta;
 
-            p0 = p0.add(&c0);
-            p1 = p1.add(&c1);
+            p0 += c0;
+            p1 += c1;
         }
 
         // Unwraps safely since coeff is d/2 + 1
-        a.set_coeff(2 * i, p0.mul(&z).div(&coeff).unwrap());
-        a.set_coeff(2 * i + 1, p1.mul(&z).div(&coeff).unwrap());
+        a.set_coeff(2 * i, (p0 * z) / coeff);
+        a.set_coeff(2 * i + 1, (p1 * z) / coeff);
     }
 
     a

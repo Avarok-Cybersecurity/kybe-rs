@@ -3,7 +3,7 @@
 //! Various utils functions defined for the KEM anf PKE algorithms
 use crate::{
     functions::hash,
-    structures::{algebraics::FiniteField, ByteArray, Poly3329, F3329},
+    structures::{ByteArray, Poly3329, F3329},
     Error,
 };
 
@@ -42,8 +42,8 @@ pub fn parse<const N: usize>(bs: &ByteArray, q: usize) -> Poly3329<N> {
 pub fn cbd<const N: usize>(bs: ByteArray, eta: usize) -> Result<Poly3329<N>, Error> {
     let mut p = Poly3329::init();
     for i in 0..N {
-        let mut a = 0;
-        let mut b = 0;
+        let mut a: usize = 0;
+        let mut b: usize = 0;
 
         for j in 0..eta {
             if bs.get_bit((2 * i * eta) + j)? {
@@ -54,7 +54,7 @@ pub fn cbd<const N: usize>(bs: ByteArray, eta: usize) -> Result<Poly3329<N>, Err
             }
         }
         let (a_hat, b_hat) = (F3329::from_int(a), F3329::from_int(b));
-        p.set_coeff(i, a_hat.sub(&b_hat));
+        p.set_coeff(i, a_hat - b_hat);
     }
 
     Ok(p)
